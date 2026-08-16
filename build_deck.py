@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-"""Generate the agent-native accounting investor deck."""
+"""Agent-native accounting deck — v2.
+
+Vantage: we are an accounting firm pitching the replacement of our traditional
+accounting software with an agent system. Audience: technically-literate investors.
+
+Changes from v1: slide 3 is technical rather than business-model background; the
+three-eras slide is gone; the roadmap collapses into a phase-2 deep dive on technical
+workstreams and investment; the verification/oracle argument is expanded.
+"""
 
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_SHAPE
@@ -12,25 +20,25 @@ from pptx.enum.shapes import MSO_SHAPE
 INK    = RGBColor(0x11, 0x1A, 0x27)
 BODY   = RGBColor(0x33, 0x3E, 0x4F)
 MUTED  = RGBColor(0x6B, 0x76, 0x88)
-ACCENT = RGBColor(0x0E, 0x74, 0x90)   # teal — structure, substrate
-WARM   = RGBColor(0xB4, 0x53, 0x09)   # rust — the defensible / the risk
+ACCENT = RGBColor(0x0E, 0x74, 0x90)
+WARM   = RGBColor(0xB4, 0x53, 0x09)
+DEEPW  = RGBColor(0x7A, 0x3B, 0x08)
+DEEPA  = RGBColor(0x0A, 0x53, 0x66)
 PANEL  = RGBColor(0xF3, 0xF6, 0xF8)
 PANEL2 = RGBColor(0xE8, 0xEE, 0xF2)
 LINE   = RGBColor(0xD5, 0xDC, 0xE4)
 WHITE  = RGBColor(0xFF, 0xFF, 0xFF)
-TINT_A = RGBColor(0xE4, 0xF0, 0xF4)   # accent tint
-TINT_W = RGBColor(0xFA, 0xEE, 0xE3)   # warm tint
+TINT_A = RGBColor(0xE4, 0xF0, 0xF4)
+TINT_W = RGBColor(0xFA, 0xEE, 0xE3)
 
 FONT = "Helvetica Neue"
-
 SW, SH = 13.333, 7.5
 ML, MR = 0.72, 0.72
-CW = SW - ML - MR          # content width = 11.893
+CW = SW - ML - MR
 
 prs = Presentation()
 prs.slide_width = Inches(SW)
 prs.slide_height = Inches(SH)
-
 _page = {"n": 0}
 
 
@@ -51,7 +59,7 @@ def new_slide(numbered=True):
 
 
 def text(slide, s, x, y, w, h, size=15, color=BODY, bold=False, align=PP_ALIGN.LEFT,
-         space=6, line=1.25, caps=False, anchor=MSO_ANCHOR.TOP):
+         space=6, line=1.25, caps=False, anchor=MSO_ANCHOR.TOP, italic=False):
     tb = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = tb.text_frame
     tf.word_wrap = True
@@ -64,26 +72,17 @@ def text(slide, s, x, y, w, h, size=15, color=BODY, bold=False, align=PP_ALIGN.L
     r = p.add_run()
     r.text = s.upper() if caps else s
     r.font.size, r.font.name, r.font.bold = Pt(size), FONT, bold
+    r.font.italic = italic
     r.font.color.rgb = color
     return tb
 
 
 def eyebrow(slide, label):
-    text(slide, label, ML, 0.46, CW, 0.28, size=10.5, color=ACCENT,
-         bold=True, caps=True)
+    text(slide, label, ML, 0.46, CW, 0.28, size=10.5, color=ACCENT, bold=True, caps=True)
 
 
 def heading(slide, s, size=27, y=0.82, w=None):
-    return text(slide, s, ML, y, w or CW, 1.0, size=size, color=INK,
-                bold=True, line=1.1)
-
-
-def rule(slide, y, x=ML, w=None, color=LINE, thick=1.0):
-    ln = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(x), Inches(y),
-                                Inches(w or CW), Pt(thick))
-    ln.fill.solid(); ln.fill.fore_color.rgb = color
-    ln.line.fill.background(); ln.shadow.inherit = False
-    return ln
+    return text(slide, s, ML, y, w or CW, 1.0, size=size, color=INK, bold=True, line=1.1)
 
 
 def box(slide, x, y, w, h, fill=PANEL, edge=None, radius=0.04):
@@ -104,7 +103,6 @@ def box(slide, x, y, w, h, fill=PANEL, edge=None, radius=0.04):
 
 
 def bullets(slide, items, x, y, w, h, size=15, gap=9, line=1.28):
-    """items: list of (text, kind) where kind in {'h','b','sub','note'}"""
     tb = slide.shapes.add_textbox(Inches(x), Inches(y), Inches(w), Inches(h))
     tf = tb.text_frame
     tf.word_wrap = True
@@ -122,11 +120,11 @@ def bullets(slide, items, x, y, w, h, size=15, gap=9, line=1.28):
             p.space_after = Pt(gap)
             r = p.add_run(); r.text = "— " + body
             r.font.size, r.font.color.rgb = Pt(size), BODY
-        elif kind == "sub":
-            p.space_after = Pt(gap - 3); p.level = 1
+        elif kind == "plain":
+            p.space_after = Pt(gap)
             r = p.add_run(); r.text = body
-            r.font.size, r.font.color.rgb = Pt(size - 2), MUTED
-        else:  # note
+            r.font.size, r.font.color.rgb = Pt(size), BODY
+        else:
             p.space_before = Pt(gap); p.space_after = Pt(2)
             r = p.add_run(); r.text = body
             r.font.size, r.font.italic, r.font.color.rgb = Pt(size - 2), True, WARM
@@ -135,10 +133,10 @@ def bullets(slide, items, x, y, w, h, size=15, gap=9, line=1.28):
 
 
 def table(slide, data, x, y, w, col_w, row_h=0.42, head_h=0.44, size=11.5,
-          head_fill=INK, emphasize_col=None):
+          emphasize_col=None):
     rows, cols = len(data), len(data[0])
     gt = slide.shapes.add_table(rows, cols, Inches(x), Inches(y), Inches(w),
-                                Inches(head_h + row_h * (rows - 1))).table
+                               Inches(head_h + row_h * (rows - 1))).table
     gt.first_row = False
     gt.horz_banding = False
     for i, cwi in enumerate(col_w):
@@ -146,36 +144,29 @@ def table(slide, data, x, y, w, col_w, row_h=0.42, head_h=0.44, size=11.5,
     gt.rows[0].height = Inches(head_h)
     for i in range(1, rows):
         gt.rows[i].height = Inches(row_h)
-
     for ri, row in enumerate(data):
         for ci, val in enumerate(row):
             cell = gt.cell(ri, ci)
-            cell.margin_left = Inches(0.1)
-            cell.margin_right = Inches(0.08)
-            cell.margin_top = Inches(0.04)
-            cell.margin_bottom = Inches(0.04)
+            cell.margin_left = Inches(0.1); cell.margin_right = Inches(0.08)
+            cell.margin_top = Inches(0.04); cell.margin_bottom = Inches(0.04)
             cell.vertical_anchor = MSO_ANCHOR.MIDDLE
             cell.fill.solid()
             if ri == 0:
-                cell.fill.fore_color.rgb = head_fill
+                cell.fill.fore_color.rgb = INK
             elif emphasize_col is not None and ci == emphasize_col:
                 cell.fill.fore_color.rgb = TINT_W
             else:
                 cell.fill.fore_color.rgb = WHITE if ri % 2 else PANEL
-            tf = cell.text_frame
-            tf.word_wrap = True
-            p = tf.paragraphs[0]
-            p.alignment = PP_ALIGN.LEFT if ci == 0 else PP_ALIGN.LEFT
-            r = p.add_run()
-            r.text = val
-            r.font.size = Pt(size)
-            r.font.name = FONT
+            p = cell.text_frame.paragraphs[0]
+            cell.text_frame.word_wrap = True
+            r = p.add_run(); r.text = val
+            r.font.size, r.font.name = Pt(size), FONT
             if ri == 0:
                 r.font.bold = True; r.font.color.rgb = WHITE
             elif ci == 0:
                 r.font.bold = True; r.font.color.rgb = INK
             elif emphasize_col is not None and ci == emphasize_col:
-                r.font.color.rgb = RGBColor(0x8A, 0x3F, 0x07)
+                r.font.color.rgb = DEEPW
             else:
                 r.font.color.rgb = BODY
     return gt
@@ -185,9 +176,11 @@ def notes(slide, body):
     slide.notes_slide.notes_text_frame.text = body.strip()
 
 
-def stat(slide, x, y, w, big, label, color=ACCENT):
-    text(slide, big, x, y, w, 0.62, size=34, color=color, bold=True, line=1.0)
-    text(slide, label, x, y + 0.66, w, 0.9, size=12, color=MUTED, line=1.25)
+def card(slide, x, y, w, h, title_, body, fill=PANEL, edge=LINE, tcol=INK,
+         tsize=12.5, bsize=10.5):
+    box(slide, x, y, w, h, fill=fill, edge=edge)
+    text(slide, title_, x + 0.24, y + 0.14, w - 0.46, 0.28, size=tsize, color=tcol, bold=True)
+    text(slide, body, x + 0.24, y + 0.45, w - 0.46, h - 0.58, size=bsize, color=BODY, line=1.32)
 
 
 # ============================================================== 1. TITLE
@@ -198,28 +191,37 @@ band = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(0), Inches(0), Inches(SW),
 band.fill.solid(); band.fill.fore_color.rgb = WARM
 band.line.fill.background(); band.shadow.inherit = False
 
-text(s, "Company strategy · Series [X] · [Month] 2026", ML, 1.5, CW, 0.3,
+text(s, "[Firm]  ·  strategy  ·  [Month] 2026", ML, 1.45, CW, 0.3,
      size=11.5, color=RGBColor(0x7A, 0xB8, 0xC8), bold=True, caps=True)
-text(s, "The Accounting Department,\nDelivered as Software",
-     ML, 2.05, 10.6, 2.1, size=42, color=WHITE, bold=True, line=1.08)
-text(s, "Traditional SaaS sold accountants a better tool. We sell the finished work — "
-        "on a substrate built so a machine's output can be proven correct.",
-     ML, 4.35, 9.6, 1.2, size=16.5, color=RGBColor(0xB9, 0xC4, 0xD2), line=1.4)
-rule(s, 5.85, x=ML, w=2.2, color=WARM, thick=2.5)
-text(s, "[Company]  ·  [presenter, title]  ·  [contact]", ML, 6.15, CW, 0.4,
+text(s, "Replacing the Accounting Software\nWith Something That Does the Accounting",
+     ML, 2.0, 11.4, 2.0, size=38, color=WHITE, bold=True, line=1.1)
+text(s, "We are an accounting firm. Our software checks that debits equal credits. It has "
+        "never once decided whether an expense belongs in an account — and that decision is "
+        "the job. It is now automatable, in the one domain where the answer can be proven.",
+     ML, 4.3, 10.2, 1.3, size=16, color=RGBColor(0xB9, 0xC4, 0xD2), line=1.4)
+ln = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(ML), Inches(5.95), Inches(2.2), Pt(2.5))
+ln.fill.solid(); ln.fill.fore_color.rgb = WARM
+ln.line.fill.background(); ln.shadow.inherit = False
+text(s, "[presenter, title]  ·  [contact]", ML, 6.22, CW, 0.4,
      size=12, color=RGBColor(0x6E, 0x7C, 0x8E))
 
 notes(s, """
-Framing sentence before slide 2: "There are two ways to pitch AI in accounting. One is
-'we added a copilot to bookkeeping software.' The other is 'we replaced the bookkeeper.'
-Only the second one is a venture-scale business, and it requires a different architecture
-from the ground up. That's what this deck is about."
+Opening line: "There are two ways to do AI in an accounting firm. One is to buy a copilot
+for the software we already have. The other is to replace the software with something that
+produces the work product. Only the second one changes our cost structure, and it needs a
+different technical foundation — which is what this deck is about."
 
-Set expectations on structure: 5 minutes of why-this-is-structurally-different, then the
-technical core, then roadmap and resourcing. Tell them the technical section is the real
+Our vantage matters and you should say it early: we are not a software company guessing at
+what accountants need. We are the firm. We have the engagements, the write access, the
+domain experts, and — the part nobody else can buy — years of closed, reviewed, filed books
+to measure a machine against.
+
+Structure: technical background (3 slides), why this domain is uniquely suited (1), the
+architecture and its four load-bearing components (6), the two hard problems (1), then
+phase 2 in detail with the investment. Tell them the architecture section is the real
 content and to interrupt there.
 
-[FILL BEFORE USE] round, date, presenter, contact.
+[FILL BEFORE USE] firm name, date, presenter, contact.
 """)
 
 
@@ -227,379 +229,372 @@ content and to interrupt there.
 
 s = new_slide()
 eyebrow(s, "The thesis")
-heading(s, "Software has always stopped at the edge of the work.\nThat edge just moved.")
+heading(s, "Software stopped at the edge of the work.\nThat edge was a technical limit, and it moved.", size=25)
 
-box(s, ML, 2.35, 3.72, 3.5, fill=PANEL)
-text(s, "1969", ML + 0.28, 2.62, 3.2, 0.4, size=13, color=MUTED, bold=True)
-text(s, "Software unbundles\nfrom hardware", ML + 0.28, 3.02, 3.2, 0.9, size=17,
-     color=INK, bold=True, line=1.2)
-text(s, "IBM separates the program from the machine. A software industry becomes possible.",
-     ML + 0.28, 4.25, 3.2, 1.3, size=12.5, color=BODY, line=1.35)
+w3 = 3.79
+xs = ML
+thesis = [
+    ("The constraint", PANEL, INK,
+     "Deterministic code cannot act under ambiguity. Every path has to be enumerated in "
+     "advance, and there is no path for \"it depends\". So every judgment was routed out of "
+     "the software and into a person."),
+    ("What lifted", PANEL, INK,
+     "Models tolerate ambiguity, cover the long tail at near-zero marginal cost, and need no "
+     "interface built in advance. Three specific engineering properties — not a claim that "
+     "models are clever."),
+    ("Why here, why us", TINT_W, DEEPW,
+     "Accounting is one of the few domains where correctness is machine-checkable. And we "
+     "already hold years of verified closes to measure against — the asset every other agent "
+     "company has to manufacture."),
+]
+for name, fill, tcol, body in thesis:
+    box(s, xs, 2.35, w3, 3.15, fill=fill, edge=WARM if fill is TINT_W else LINE)
+    text(s, name, xs + 0.28, 2.6, w3 - 0.55, 0.4, size=17.5, color=tcol, bold=True)
+    text(s, body, xs + 0.28, 3.15, w3 - 0.55, 2.1, size=13, color=BODY, line=1.42)
+    xs += w3 + 0.28
 
-box(s, ML + 4.08, 2.35, 3.72, 3.5, fill=PANEL)
-text(s, "1999", ML + 4.36, 2.62, 3.2, 0.4, size=13, color=MUTED, bold=True)
-text(s, "Software unbundles\nfrom ownership", ML + 4.36, 3.02, 3.2, 0.9, size=17,
-     color=INK, bold=True, line=1.2)
-text(s, "Browser, broadband and multi-tenancy solve distribution. The seat becomes the meter.",
-     ML + 4.36, 4.25, 3.2, 1.3, size=12.5, color=BODY, line=1.35)
-
-box(s, ML + 8.16, 2.35, 3.72, 3.5, fill=TINT_W)
-text(s, "NOW", ML + 8.44, 2.62, 3.2, 0.4, size=13, color=WARM, bold=True)
-text(s, "The outcome unbundles\nfrom the operator", ML + 8.44, 3.02, 3.2, 0.9, size=17,
-     color=INK, bold=True, line=1.2)
-text(s, "The vendor can do the work, not just host the place where a human does it. "
-        "The meter has to change with it.",
-     ML + 8.44, 4.25, 3.2, 1.3, size=12.5, color=RGBColor(0x7A, 0x3B, 0x08), line=1.35)
-
-text(s, "Accounting is the best first market for this, for one technical reason: it is a domain "
-        "where correctness is machine-checkable.",
-     ML, 6.25, CW, 0.6, size=15.5, color=INK, bold=True, line=1.3)
+box(s, ML, 5.75, CW, 1.1, fill=INK)
+text(s, "The bet is not that models are smart. It is that accounting is verifiable — so we "
+        "can prove our output is correct before it ever touches a client's books.",
+     ML + 0.34, 6.05, CW - 0.68, 0.6, size=16, color=WHITE, bold=True, line=1.3)
 
 notes(s, """
-This is the whole pitch in one slide. Deliver it, pause, then say you'll spend the rest
-of the time defending the third box and the bottom line.
+This is the whole argument in one slide. Deliver it, pause, then say the rest of the deck
+defends the third box and the dark bar.
 
-The historical framing does real work with investors: it positions this as the next step in
-a pattern they already believe in, rather than as AI hype. Each prior unbundling created
-larger companies than the one before, because each moved closer to the customer's actual
-spend.
+The first box is the point most people miss: the reason accounting software makes us fill in
+forms is not laziness or bad design. It is that deterministic code physically cannot handle
+"it depends", so the ambiguity had to go somewhere, and it went to us. Every hour of our
+staff time is the cost of that architectural constraint.
 
-The bottom line is the slide's most important sentence and the one that separates us from
-every other "AI for X" company. Most agent startups operate in domains where you cannot
-tell whether the output is right — so they cap out at "assistive." Accounting has
-double-entry, trial-balance ties, and bank reconciliation: a machine-checkable definition
-of correct. That is what makes autonomy shippable here first.
+The dark bar is the sentence to repeat if you get only one. Almost every agent pitch in the
+market cannot say it, because almost no domain lets you check the answer mechanically. Ours
+does.
 
-Likely question: "Isn't this just what Intuit will ship?" Answer on slide 8 and 16 — hold it.
+If someone jumps ahead to "why won't the incumbents just ship this" — park it, you answer it
+structurally on the architecture slides. The short version: the substrate they would need is
+a schema decision they cannot retrofit, and their revenue depends on the seats this removes.
 """)
 
 
-# ============================================================== 3. WHY SAAS EXISTS
+# ============================================================== 3. WHY THE SOFTWARE IS SHAPED THIS WAY
 
 s = new_slide()
-eyebrow(s, "Background · 1 of 3")
-heading(s, "Why SaaS exists: software's problem was never production")
+eyebrow(s, "Technical background · 1 of 3")
+heading(s, "Why our accounting software is shaped the way it is")
 
-text(s, "Zero marginal cost to copy, high fixed cost to create. So the business problem of "
-        "software is only ever distribution and metering. Every era is an answer to those two.",
-     ML, 1.92, 11.0, 0.7, size=15, color=BODY, line=1.35)
-
-rule(s, 2.82)
+text(s, "Not a criticism of the vendors — a consequence of what deterministic software can "
+        "and cannot do. Four design choices follow from one limit, and all four put the work "
+        "on us.",
+     ML, 1.9, 11.2, 0.6, size=15, color=BODY, line=1.35)
 
 cols = [
-    ("Distribution", "No install, no procurement, self-serve trial, land-and-expand. "
-     "Recurring revenue made CAC financeable — which made the entire GTM machine possible."),
-    ("Marginal cost", "Multi-tenancy: one codebase, one deployment, N customers. "
-     "This single fact — not anything else — is why SaaS gross margins are 75–85%."),
-    ("Metering", "The seat. Nobody ever wanted a login. The seat was chosen because it was "
-     "cheap to count, hard to game, and correlated with usage. It was a proxy."),
-    ("Alignment", "Renewal disciplines the vendor; continuous delivery replaces the "
-     "big-bang upgrade. Risk for infra, uptime and upgrades transfers to the vendor."),
+    ("Pre-specified paths",
+     "Every branch must be enumerated by a developer before it runs. There is no code path "
+     "for \"this invoice is ambiguous\". Anything requiring interpretation has to leave the "
+     "program."),
+    ("The form as adapter",
+     "A form converts fuzzy human intent into a structure the program can execute. That is "
+     "its actual function. Forms are the scar tissue of the constraint above — which is why "
+     "there are so many of them."),
+    ("Validation is syntactic",
+     "The software checks that the date is a date and the entry balances. It does not check "
+     "whether the expense belongs in that account. Well-formed and correct are different "
+     "questions, and it only asks the first."),
+    ("The human is the error handler",
+     "Semantic correctness was outsourced to us. The vendor's contract is: prevent invalid "
+     "states, show a clear error. A far cheaper contract than being right — and the reason "
+     "our cost structure is people."),
 ]
 cx = ML
-for i, (h, b) in enumerate(cols):
+for h, b in cols:
     w = 2.79
-    text(s, h, cx, 3.05, w, 0.4, size=17, color=ACCENT, bold=True)
-    text(s, b, cx, 3.58, w, 2.2, size=13, color=BODY, line=1.4)
+    text(s, h, cx, 2.72, w, 0.62, size=16, color=ACCENT, bold=True, line=1.15)
+    text(s, b, cx, 3.48, w, 2.3, size=12.5, color=BODY, line=1.42)
     cx += w + 0.25
 
-box(s, ML, 5.95, CW, 0.95, fill=TINT_W)
-text(s, "Hold on to the third column. The seat was a measurement convenience that assumed a "
-        "human doing work per seat. Everything in the next section follows from that assumption breaking.",
-     ML + 0.3, 6.16, CW - 0.6, 0.6, size=14.5, color=RGBColor(0x7A, 0x3B, 0x08),
-     bold=True, line=1.3)
+box(s, ML, 5.95, CW, 1.0, fill=TINT_W)
+text(s, "Our software was never trying to do the accounting. It was trying to stop us from "
+        "entering something impossible. Everything in this deck follows from taking on the "
+        "harder contract: being right, and proving it.",
+     ML + 0.32, 6.2, CW - 0.64, 0.6, size=14.5, color=DEEPW, bold=True, line=1.3)
 
 notes(s, """
-Purpose of this slide: establish that you understand SaaS as an economic machine, not just
-as "the thing before AI." Investors with technical backgrounds have usually never heard the
-seat described as a proxy metric, and it reframes the rest of the conversation.
+This slide replaces the business-model background from the earlier draft. It does the same
+setup job but in technical terms, which suits both the audience and the fact that we are
+insiders describing tools we use daily.
 
-Say out loud: "SaaS didn't win because it was in the cloud. It won because multi-tenancy
-made marginal cost near zero and the seat made revenue predictable. Both of those are
-about metering and distribution — not about the software being better."
+The third column is the one to slow down on, because it is the pivot for the entire
+architecture section. Say it plainly: "Every accounting system we have ever used validates
+syntax, not semantics. It will happily let us post a perfectly balanced entry to completely
+the wrong account. Well-formed and correct are different questions, and no software we own
+asks the second one." Then: the whole point of what we are building is a system that asks
+the second question, and can answer it.
 
-Land the last box hard. It's the pivot for the whole deck: we are not claiming SaaS was
-badly built. We're claiming its meter was calibrated to an assumption that no longer holds.
+The fourth column is where the audience feels it. Everyone in the room who has staffed a
+close knows that the software's job ends exactly where the expensive part begins.
 
-If someone asks why history matters: because the failure mode of this category is companies
-that build agent features and keep seat pricing. That combination is structurally
-unprofitable and we want to explain why we avoided it.
+Watch the tone — do not bash Xero or QBO. Their design was correct for the constraint they
+faced. Being fair about that makes the claim that the constraint has lifted more credible,
+not less.
 """)
 
 
-# ============================================================== 4. WHAT SAAS DIDN'T SOLVE
+# ============================================================== 4. WHERE THE HOURS GO
 
 s = new_slide()
-eyebrow(s, "Background · 2 of 3")
-heading(s, "What SaaS deliberately did not solve")
+eyebrow(s, "Technical background · 2 of 3")
+heading(s, "The consequence, in our own P&L: where the hours actually go")
 
-text(s, "SaaS sells the arena, not the win. The customer still supplies intent, judgment, "
-        "attention and keystrokes.",
-     ML, 1.9, 11.0, 0.4, size=15.5, color=INK, bold=True)
-
-items = [
-    ("Value delivered is capped by the customer's own labor capacity.", "h"),
-    ("A CRM doesn't sell you pipeline; it sells a place to put pipeline. This is why "
-     "implementation, adoption, change management and shelfware are permanent features "
-     "of the industry rather than execution failures.", "b"),
-    ("The interface became the moat — and the cost centre.", "h"),
-    ("Because humans do the work, switching cost is muscle memory, admin config and "
-     "integrations. Feature bloat isn't incompetence: it is customer heterogeneity "
-     "projected onto deterministic code.", "b"),
-    ("The human was the error-handling layer.", "h"),
-    ("SaaS validation is syntactic — is the date a date, do debits equal credits. It is "
-     "almost never semantic — does this expense belong in that account. Semantic "
-     "correctness was silently outsourced to the user.", "b"),
+box(s, ML, 1.95, 5.79, 4.15, fill=PANEL, edge=LINE)
+text(s, "What the software already does well", ML + 0.3, 2.18, 5.2, 0.3, size=11,
+     color=MUTED, bold=True, caps=True)
+text(s, "Deterministic, solved, and not where our cost is", ML + 0.3, 2.5, 5.2, 0.3,
+     size=13, color=INK, bold=True)
+left = [
+    ("Posting mechanics and arithmetic", "b"),
+    ("Statement and report generation", "b"),
+    ("Storage, retrieval, period structure", "b"),
+    ("Syntactic validation and balance checks", "b"),
+    ("Bank feed plumbing", "b"),
 ]
-bullets(s, items, ML, 2.5, 7.3, 4.0, size=14)
+bullets(s, left, ML + 0.3, 2.95, 5.2, 2.0, size=13, gap=8)
+text(s, "We should keep all of this. None of it is the problem.",
+     ML + 0.3, 5.5, 5.2, 0.4, size=12.5, color=MUTED, italic=True)
 
-box(s, ML + 7.75, 2.5, 4.12, 3.62, fill=PANEL)
-text(s, "Consequence", ML + 8.05, 2.75, 3.5, 0.3, size=11, color=MUTED, bold=True, caps=True)
-text(s, "Software self-selected\ninto the small slice.", ML + 8.05, 3.1, 3.5, 0.8,
-     size=18, color=INK, bold=True, line=1.15)
-text(s, "For any business function, software captures single-digit percentages of that "
-        "function's total cost.\n\nPayroll software vs. the payroll team. Legal tech vs. "
-        "legal spend. Accounting software vs. accountants.\n\nNot an oversight — software "
-        "could not do the other part.",
-     ML + 8.05, 4.05, 3.5, 2.0, size=12.5, color=BODY, line=1.4)
+box(s, ML + 6.11, 1.95, 5.79, 4.15, fill=TINT_W, edge=WARM)
+text(s, "What a person does on every engagement", ML + 6.41, 2.18, 5.2, 0.3, size=11,
+     color=WARM, bold=True, caps=True)
+text(s, "Semantic judgment — and effectively all of our cost", ML + 6.41, 2.5, 5.2, 0.3,
+     size=13, color=INK, bold=True)
+right = [
+    ("Classifying ambiguous transactions and vendors", "b"),
+    ("Matching and clearing reconciliation exceptions", "b"),
+    ("Chasing the client for missing documents", "b"),
+    ("Capitalise-or-expense and accrual judgment", "b"),
+    ("Intercompany, allocations, unusual one-offs", "b"),
+    ("Variance investigation, review and sign-off", "b"),
+]
+bullets(s, right, ML + 6.41, 2.95, 5.2, 2.4, size=13, gap=6)
 
-text(s, "[SOURCE NEEDED — put the accounting-specific software-spend vs. labour-spend ratio here; "
-        "it carries the entire TAM argument]",
-     ML, 6.45, CW, 0.5, size=11.5, color=WARM, bold=True)
+box(s, ML, 6.25, CW, 0.82, fill=PANEL2)
+text(s, "We can size this precisely, and we should: we already have the time records. "
+        "Instrument hours by activity, not transaction counts — the easy majority of "
+        "transactions is a small minority of the cost.  [FILL: our hours per close by "
+        "activity, from time data]",
+     ML + 0.32, 6.45, CW - 0.64, 0.5, size=13, color=INK, bold=True, line=1.3)
 
 notes(s, """
-This is the most important background slide. The "human was the error-handling layer" point
-is the one technical investors respond to, because it reframes 25 years of software as
-having a much cheaper correctness contract than people realise: prevent invalid states and
-show a clear error. Not: produce the right answer.
+This slide is only possible because we are the firm, and it is our strongest credibility
+asset in the room. A software startup has to guess at this split. We can produce it from
+time records.
 
-Say it plainly: "Every form you have ever filled in is a device for converting fuzzy human
-intent into a structure a program can execute. Forms are the scar tissue of software's
-inability to handle ambiguity."
+Run the contrast explicitly: everything on the left is what we pay a software licence for.
+Everything on the right is what we pay salaries for. The right-hand column is roughly an
+order of magnitude more expensive than the left, and no software we own touches any line
+of it. That gap is the opportunity, stated without any market-sizing hand-waving.
 
-The right-hand panel sets up the TAM slide. Do NOT overclaim the number here — put the
-sourced figure in and cite it. If you assert a ratio you can't defend, a sharp investor
-will spend the rest of the meeting on it and you lose the technical section.
+The bottom bar carries the 60/40 warning, and it matters commercially: a system that
+automates 80% of transactions may have automated 30% of the cost, because the residual tail
+is where the hours concentrate. We will report on hours, not transaction counts, and we can
+because we bill in hours.
 
-ACTION: replace the red placeholder line before this deck leaves the room.
+ACTION: fill in the real activity-level hours before presenting. This is the single most
+persuasive number in the deck and we are the only ones who have it. Do not present the
+placeholder.
 """)
 
 
 # ============================================================== 5. THREE CONSTRAINTS
 
 s = new_slide()
-eyebrow(s, "Background · 3 of 3")
+eyebrow(s, "Technical background · 3 of 3")
 heading(s, "Three constraints forced that design. All three just lifted.")
 
-hdr = [["The constraint that made forms necessary", "What it forced", "What changes now"]]
+hdr = [["The constraint", "What it forced", "What changes now"]]
 rows = [
     ["No tolerance for ambiguity",
      "Every path pre-specified. Anything needing interpretation of unstructured input was "
-     "handed to a human behind a form.",
-     "Models absorb messy documents, bank memos, contracts, email threads — the exact "
-     "inputs SaaS pushed onto people."],
+     "handed to a person behind a form.",
+     "Models absorb messy documents, bank memos, contracts and email threads — the exact "
+     "inputs the software pushed onto our staff."],
     ["No economics for the long tail",
-     "The 1,000th edge case costs as much as the first. Vendors served the mode and left "
-     "the tail to consultants and spreadsheets.",
+     "The 1,000th edge case costs as much to build as the first. Vendors served the common "
+     "case and left the tail to us and to spreadsheets.",
      "Marginal cost of covering an edge case approaches the cost of describing it. The tail "
-     "becomes addressable."],
+     "becomes addressable for the first time."],
     ["Every capability needed a pre-built interface",
-     "Customers could only direct software through affordances a PM imagined and a roadmap "
-     "funded.",
-     "Natural language is a universal interface. No vendor has to anticipate the request "
-     "in advance."],
+     "We could only direct the software through affordances a product manager imagined and "
+     "a roadmap funded.",
+     "Natural language is a universal interface. Nobody has to anticipate the request in "
+     "advance for it to be answerable."],
 ]
 table(s, hdr + rows, ML, 2.05, CW, [3.3, 4.29, 4.3], row_h=1.20, head_h=0.46,
       size=12.5, emphasize_col=2)
 
-box(s, ML, 6.28, CW, 0.82, fill=TINT_A)
-text(s, "The claim under this deck is not \"AI is smart.\" It is three specific engineering "
-        "properties: ambiguity tolerance, near-zero marginal cost on the long tail, and an "
-        "interface nobody has to build in advance.",
-     ML + 0.3, 6.48, CW - 0.6, 0.5, size=14, color=RGBColor(0x0A, 0x53, 0x66),
-     bold=True, line=1.3)
+box(s, ML, 6.18, CW, 0.85, fill=TINT_A)
+text(s, "This is the technical claim under the whole strategy — three specific properties, "
+        "not a general belief about AI: ambiguity tolerance, near-zero marginal cost on the "
+        "long tail, and an interface nobody has to build in advance.",
+     ML + 0.32, 6.38, CW - 0.64, 0.5, size=14, color=DEEPA, bold=True, line=1.3)
 
 notes(s, """
-This slide earns credibility with a technical audience because it refuses the hype framing.
-Any investor who has sat through forty AI pitches has heard "AI changes everything." Almost
-none have heard a precise statement of which constraints lifted.
+This slide earns credibility precisely by refusing the hype framing. Any investor who has
+sat through forty AI pitches has heard "AI changes everything"; very few have heard a
+precise statement of which constraints lifted and which did not.
 
-Walk the rows left to right, one sentence each. Then deliver the bottom box verbatim — it's
-the most quotable line in the deck and it's what they'll repeat to their partnership.
+Walk the rows left to right, one sentence each. Then deliver the bottom box close to
+verbatim — it is the most quotable line in the deck.
 
-Anticipated pushback: "the long tail claim is doing a lot of work." Concede partially — the
-marginal cost of the tail falls a lot but not to zero, and reliability on tail cases is
-worse than on the mode. That's precisely why the architecture has a verification layer and
-a human review queue rather than assumed autonomy. Point forward to slide 12.
+Expected pushback: "the long-tail claim is doing a lot of work." Concede it partially and
+immediately — marginal cost on the tail falls a great deal but not to zero, and reliability
+on tail cases is measurably worse than on the common case. That is exactly why the
+architecture has a verification layer and a human review queue rather than assumed
+autonomy. Point forward to the verification slide; do not defend more than the evidence
+supports.
 """)
 
 
-# ============================================================== 6. THREE ERAS TABLE
+# ============================================================== 6. THE ORACLE
 
 s = new_slide()
-eyebrow(s, "The shift")
-heading(s, "Three eras, side by side")
+eyebrow(s, "Domain fit")
+heading(s, "Accounting is the best domain for this, and the reason is verification")
 
-hdr = [["", "Perpetual licence", "SaaS", "Agent-native"]]
-rows = [
-    ["Unit of sale", "a copy", "access", "completed work"],
-    ["Meter", "licence + maintenance", "seat / month", "unit of output"],
-    ["Who does the work", "customer", "customer", "vendor"],
-    ["Marginal cost", "media, channel", "hosting — low, fixed", "inference + review — variable, falling"],
-    ["Gross margin", "high", "75–85%, flat from day one", "40–60% rising toward 70–80%"],
-    ["Value ceiling", "customer's labour capacity", "customer's labour capacity", "the work itself"],
-    ["Moat", "install base, data gravity", "UI habit, integrations, config", "verification, context, write permission, evals"],
-    ["Buyer / budget", "IT · capex", "function owner · software opex", "P&L owner · labour opex"],
-    ["Benchmarked against", "other licences", "other software", "a salary"],
-    ["Interface", "GUI", "web GUI", "conversation + exception queue"],
+text(s, "Most agent products cap out at \"assistive\" because nobody can mechanically tell "
+        "whether the output is right. In law, in consulting, in most knowledge work there is "
+        "no oracle. Accounting hands us one.",
+     ML, 1.88, 11.4, 0.6, size=15, color=BODY, line=1.35)
+
+w3 = 3.79
+xs = ML
+panels = [
+    ("1 · The domain gives us a verifier", TINT_A, DEEPA,
+     ["Debits must equal credits on every entry",
+      "Trial balance must tie",
+      "Subledgers must tie to control accounts",
+      "Bank reconciliation must net to zero",
+      "Tax and filing rules are codified, not inferred"], None),
+    ("2 · So we can verify before we commit", TINT_W, DEEPW, None,
+     "That single capability is the difference between a demo and a system we would put in "
+     "front of a client.\n\nIt lets us auto-post with a measured error bound, route only "
+     "genuine ambiguity to a person, and state our own accuracy in terms an external "
+     "reviewer will accept."),
+    ("3 · And we already own the ground truth", TINT_W, DEEPW, None,
+     "Every closed, reviewed, filed month in our archive is a labelled example with a "
+     "verified outcome.\n\nMost agent companies have to manufacture or buy this. We have "
+     "years of it, tied to real engagements, with the reviewer's reasoning still on file."),
 ]
-table(s, hdr + rows, ML, 1.95, CW, [2.3, 2.75, 3.2, 3.68], row_h=0.42, head_h=0.44,
-      size=11.5, emphasize_col=3)
+for name, fill, tcol, blist, bodytext in panels:
+    box(s, xs, 2.62, w3, 3.12, fill=fill, edge=WARM if fill is TINT_W else ACCENT)
+    text(s, name, xs + 0.26, 2.85, w3 - 0.5, 0.32, size=13.5, color=tcol, bold=True)
+    if blist:
+        bullets(s, [(b, "b") for b in blist], xs + 0.26, 3.28, w3 - 0.5, 2.2, size=12.5, gap=7)
+    else:
+        text(s, bodytext, xs + 0.26, 3.28, w3 - 0.5, 2.3, size=12.5, color=BODY, line=1.42)
+    xs += w3 + 0.28
 
-notea = ("Read the last four rows first — they are the investment case: the value ceiling "
-         "lifts, the price benchmark moves from a software budget to a salary, and the moat "
-         "relocates to things that compound.")
-text(s, notea, ML, 6.62, CW, 0.5, size=12, color=WARM, bold=True, line=1.3)
+box(s, ML, 5.98, CW, 0.95, fill=INK)
+text(s, "An oracle plus a labelled archive is not a nice-to-have. It is the reason autonomy "
+        "is shippable in accounting before it is shippable almost anywhere else — and the "
+        "reason it is shippable in this firm first.",
+     ML + 0.34, 6.2, CW - 0.68, 0.55, size=15, color=WHITE, bold=True, line=1.3)
 
 notes(s, """
-Hand this one over rather than reading it. Say: "read the last four rows first." Then be
-quiet for five seconds — technical investors want to scan a table like this themselves.
+This is the slide the audience should leave remembering, and it answers two questions at
+once: why this vertical, and why us rather than a well-funded software company.
 
-The two rows to speak to:
+Make the general point first. In most knowledge work you cannot check the answer
+mechanically, so a human never leaves the loop and the product ceiling is assistive. We did
+not pick accounting because it is exciting. We picked it because it is verifiable.
 
-GROSS MARGIN. This is the row that will generate the hardest question, so pre-empt it.
-Classic SaaS had 80% margins on day one because marginal cost was hosting. We start at
-services-like margins because inference and human review are real COGS, and we climb as
-automation rate rises and token prices fall. Our financial story is not "we have SaaS
-margins" — it is "we have a margin slope." Anyone who claims 80% gross margin in year one
-in this category is either subsidising with venture money or not measuring properly.
+Then panel 3, which is the firm-specific half and the part an outsider cannot replicate.
+Spell it out: a startup in this space spends its first two years trying to acquire what is
+sitting in our document management system. Every closed month is an input-output pair with
+a verified outcome and, often, the reviewer's notes explaining the judgment. That is a
+training and evaluation corpus, and it is proprietary.
 
-BENCHMARKED AGAINST. Our competitor is not Xero. It's the decision to hire a bookkeeper.
-That changes the price ceiling by an order of magnitude, and it changes the sale: it's
-bought from a labour budget by a P&L owner, so the scrutiny is on reliability and liability
-rather than on features.
+If asked how much: have the count ready — entities, months closed, years of archive. It is
+the most concrete asset claim we can make, so it should be a real number.
+
+Caveat to volunteer before they raise it: the archive needs consent and confidentiality
+review before use, and engagement letters may need updating. We have looked at it; it is a
+process question, not a blocker. Do not pretend the question does not exist.
 """)
 
 
-# ============================================================== 7. WHAT ACTUALLY SHIFTS
+# ============================================================== 7. WHAT BECOMES DEFENSIBLE
 
 s = new_slide()
-eyebrow(s, "The shift")
-heading(s, "Five shifts, and one thing that does not change")
+eyebrow(s, "What this changes")
+heading(s, "Where the defensible engineering sits now")
 
-left = [
-    ("The unit of sale becomes completed work.", "h"),
-    ("SaaS ate services firms' margin by selling them better tools. Agents take services "
-     "firms' revenue by doing the work.", "b"),
-    ("The meter breaks and must be rebuilt.", "h"),
-    ("Price on a unit the customer already counts in their own P&L: entities, transactions, "
-     "closes. Not seats.", "b"),
-    ("Gross margin becomes earned, not structural.", "h"),
-    ("Automation rate is simultaneously product quality, the GM driver, and the moat. It is "
-     "our single north-star metric.", "b"),
+text(s, "When the vendor's differentiation was the interface, the moat was habit and "
+        "configuration. When the system does the work, four different things become hard to "
+        "copy — and none of them is the prompt.",
+     ML, 1.88, 11.4, 0.6, size=15, color=BODY, line=1.35)
+
+quads = [
+    ("Verification", "Anyone can prompt a model. Almost nobody can prove the output is "
+     "correct. In a domain with an oracle, the verifier is the product."),
+    ("Context", "Accumulated client-specific policy and history: this vendor is always COGS, "
+     "this client capitalises above [$2,500]. Proprietary state, not a model."),
+    ("Permission", "Write access to the ledger, the bank, the filing. Reversing that is a "
+     "governance decision with a liability trail — a far stronger lock-in than UI habit."),
+    ("Evals", "A corpus of verified outcomes to regression-test against. Prompts copy in an "
+     "afternoon; a decade of reviewed closes does not."),
 ]
-bullets(s, left, ML, 2.0, 5.6, 3.4, size=13.5)
+xq, yq = ML, 2.62
+for i, (h, b) in enumerate(quads):
+    x = ML + (i % 2) * 3.02
+    y = 2.62 + (i // 2) * 1.62
+    text(s, h, x, y, 2.78, 0.3, size=16, color=ACCENT, bold=True)
+    text(s, b, x, y + 0.4, 2.78, 1.1, size=12.5, color=BODY, line=1.4)
 
-right = [
-    ("The moat relocates — to four things that compound.", "h"),
-    ("Verification (anyone can prompt a model; almost nobody can prove the output). "
-     "Context (client-specific policy and history). Permission (write access to the ledger, "
-     "the bank, the filing). Evals (a corpus of verified outcomes).", "b"),
-    ("Buyer, budget and benchmark all move.", "h"),
-    ("From software budget vs. other software, to labour budget vs. a salary. Higher "
-     "ceiling, longer trust cycle, different scrutiny.", "b"),
-]
-bullets(s, right, ML + 6.05, 2.0, 5.85, 2.6, size=13.5)
-
-box(s, ML + 6.05, 4.72, 5.85, 2.05, fill=PANEL)
-text(s, "What does not change", ML + 6.35, 4.94, 5.3, 0.3, size=11, color=MUTED,
+box(s, ML + 6.35, 2.62, 5.55, 3.12, fill=PANEL)
+text(s, "What does not change", ML + 6.65, 2.86, 5.0, 0.3, size=11, color=MUTED,
      bold=True, caps=True)
-text(s, "Systems of record matter more, not less — agents need a substrate with truth, "
-        "permissions and history. Agents make interfaces obsolete, not databases. "
-        "Trust, security and compliance still gate enterprise adoption. And distribution "
-        "still decides who wins: better technology has never once been sufficient.",
-     ML + 6.35, 5.28, 5.3, 1.4, size=12.5, color=BODY, line=1.4)
+text(s, "The system of record matters more, not less. Agents need a substrate with truth, "
+        "permissions and history — they make interfaces obsolete, not databases. Anyone who "
+        "tells you the ledger goes away has not built one.\n\nTrust, security, "
+        "confidentiality and professional standards still gate everything. Our licence and "
+        "our reputation are the assets at risk, which is why the controls in this "
+        "architecture are not optional extras.",
+     ML + 6.65, 3.24, 5.0, 2.4, size=12.5, color=BODY, line=1.44)
+
+box(s, ML, 5.98, CW, 0.9, fill=TINT_W)
+text(s, "Note what is not on this list: the agent layer. Prompts are the cheapest and most "
+        "replaceable component in the system, and we have deliberately built the least of it.",
+     ML + 0.32, 6.2, CW - 0.64, 0.5, size=14, color=DEEPW, bold=True, line=1.3)
 
 notes(s, """
-Pace: 30 seconds per left-hand item, then hand the right side over.
+This is the bridge into the architecture. It tells the audience what to look for in the next
+six slides.
 
-The "what does not change" box is deliberate and it does more for credibility than anything
-else on the slide. Every investor in this category has heard someone claim agents make
-databases or SaaS obsolete. Saying plainly that the system of record becomes MORE important
-signals that we've actually built something.
+Draw out permission specifically, because it is the one an investor will underrate. UI habit
+is a preference and preferences get overridden in a procurement cycle. Write access to a
+client's ledger and bank, with our professional liability attached, is a governance decision
+with a documented approval trail. Reversing it requires a partner-level conversation, not a
+preference change.
 
-On the moat: draw out permission specifically. UI habit is a preference, and preferences
-get overridden. Write access to a company's ledger and its bank is a governance decision
-with a liability trail — reversing it requires a board-level conversation, not a
-preference change. That is a materially stronger switching cost than anything SaaS had.
+The "what does not change" panel is deliberate and it buys more credibility than anything
+else on the slide. Everyone in this category has heard someone claim agents make databases
+or systems of record obsolete. Saying plainly that the ledger becomes MORE important signals
+we have actually built something.
 
-If asked "which of the four moats do you have today?" — be honest. Verification is built,
-evals are in progress, context accrues per customer per month, permission comes with
-each deployment. Don't claim all four are mature.
+The bottom bar sets up the biggest surprise in the architecture section — that the agent
+layer is one of the smallest line items. Plant it here so it lands twice.
+
+If asked which of the four we have today: be honest. Verification is built, evals are in
+progress, context accrues per client per month, permission comes with each engagement. Do
+not claim all four are mature.
 """)
 
 
-# ============================================================== 8. WHY ACCOUNTING
+# ============================================================== 8. ARCHITECTURE
 
 s = new_slide()
-eyebrow(s, "Market selection")
-heading(s, "Why accounting first: the domain hands us an oracle")
-
-text(s, "Most agent products fail because nobody can tell whether the output is right — so "
-        "they cap out at \"assistive\". Accounting is one of very few domains with a "
-        "machine-checkable definition of correct.",
-     ML, 1.9, 11.2, 0.7, size=15, color=BODY, line=1.35)
-
-box(s, ML, 2.72, 5.75, 3.05, fill=TINT_A)
-text(s, "Deterministic checks we get for free", ML + 0.3, 2.95, 5.15, 0.3, size=11,
-     color=RGBColor(0x0A, 0x53, 0x66), bold=True, caps=True)
-chk = [
-    ("Debits must equal credits on every entry", "b"),
-    ("Trial balance must tie", "b"),
-    ("Subledgers must tie to control accounts", "b"),
-    ("Bank reconciliation must net to zero", "b"),
-    ("Tax and filing rules are codified, not inferred", "b"),
-]
-bullets(s, chk, ML + 0.3, 3.35, 5.15, 2.2, size=13, gap=7)
-
-box(s, ML + 6.13, 2.72, 5.75, 3.05, fill=PANEL)
-text(s, "What that buys us architecturally", ML + 6.43, 2.95, 5.15, 0.3, size=11,
-     color=MUTED, bold=True, caps=True)
-text(s, "We can verify before we commit.\n\nThat single capability is the difference between "
-        "a demo and a product. It lets us auto-post with a provable error bound, route only "
-        "genuine ambiguity to a human, and put a number on our own accuracy that a "
-        "customer's auditor will accept.\n\nIt is also why our margin slope is credible: the "
-        "review queue shrinks against a measurable ceiling, not a hoped-for one.",
-     ML + 6.43, 3.35, 5.15, 2.3, size=13, color=BODY, line=1.42)
-
-text(s, "Secondary reasons: high-volume repetitive work, messy unstructured inputs where "
-        "classic software loses, and a buyer (the firm) whose gross margin we roughly double.",
-     ML, 6.1, CW, 0.6, size=13.5, color=INK, line=1.35)
-text(s, "[SOURCE NEEDED — firm gross-margin benchmark before/after, from design-partner data]",
-     ML, 6.72, CW, 0.4, size=11.5, color=WARM, bold=True)
-
-notes(s, """
-This is the slide that answers "why won't you get killed by a horizontal agent platform"
-and "why this vertical." Both answers are the same: the oracle.
-
-Make the general point first — in law, in consulting, in most knowledge work, you cannot
-mechanically check the answer, so the product ceiling is assistive and the human never
-leaves the loop. In accounting the invariants are the check. We didn't choose this market
-because accounting is exciting. We chose it because it is verifiable.
-
-Then the consequence, which is the commercially important half: verification lets us
-auto-post with a provable error bound. That is what makes autonomy sellable to a CFO and
-defensible to an auditor.
-
-Have the design-partner margin data ready as a backup slide if asked. If we don't have it
-yet, say so and give the theoretical basis — don't invent a number.
-""")
-
-
-# ============================================================== 9. ARCHITECTURE OVERVIEW
-
-s = new_slide()
-eyebrow(s, "Technical architecture")
+eyebrow(s, "Architecture")
 heading(s, "The agent decides. Deterministic code executes.\nNothing commits unverified.", size=24)
 
 LX, LW = ML, 9.85
@@ -608,130 +603,127 @@ top = 2.42
 bh, bg = 0.515, 0.075
 
 layers = [
-    ("Client surfaces", "exception queue (the real UI) · chat & email · reports", PANEL, INK, False),
-    ("Verification & guardrails", "hard invariants · anomaly and variance · confidence routing", TINT_W, INK, True),
-    ("Agent layer", "workflow supervisors · extract · categorise · match · chase · analyse", PANEL, INK, False),
-    ("Durable orchestration", "the close checklist as a resumable state machine, not free-form agency", PANEL, INK, False),
-    ("Deterministic tool layer", "typed, invariant-enforcing actions: post_entry · reconcile · close_period", TINT_W, INK, True),
-    ("Ledger core", "append-only · bitemporal · double-entry · full provenance", TINT_W, INK, True),
-    ("Ingestion", "banks · cards · payroll · POS · AP inbox · documents · prior-year books", PANEL, INK, False),
+    ("Client surfaces", "exception queue (the real UI) · chat & email · client reporting", PANEL, False),
+    ("Verification & guardrails", "hard invariants · anomaly and variance · confidence routing", TINT_W, True),
+    ("Agent layer", "workflow supervisors · extract · classify · match · chase · analyse", PANEL, False),
+    ("Durable orchestration", "the close checklist as a resumable state machine, not free-form agency", PANEL, False),
+    ("Deterministic tool layer", "typed, invariant-enforcing actions: post_entry · reconcile · close_period", TINT_W, True),
+    ("Ledger core", "append-only · bitemporal · double-entry · full provenance", TINT_W, True),
+    ("Ingestion", "banks · cards · payroll · POS · AP inbox · documents · prior-year books", PANEL, False),
 ]
 y = top
-for name, detail, fill, col, star in layers:
-    box(s, LX, y, LW, bh, fill=fill, edge=LINE if fill is PANEL else WARM)
-    text(s, name, LX + 0.22, y + 0.085, 3.0, 0.36, size=13.5, color=col, bold=True)
-    text(s, detail, LX + 3.3, y + 0.105, LW - 3.55, 0.36, size=11.5, color=BODY)
+for name, detail, fill, star in layers:
+    box(s, LX, y, LW, bh, fill=fill, edge=WARM if fill is TINT_W else LINE)
+    text(s, name, LX + 0.22, y + 0.075, 3.0, 0.36, size=13.5, color=INK, bold=True)
+    text(s, detail, LX + 3.3, y + 0.095, LW - 3.55, 0.36, size=11.5, color=BODY)
     if star:
-        text(s, "◆", LX + LW - 0.34, y + 0.1, 0.3, 0.3, size=12, color=WARM, bold=True)
+        text(s, "◆", LX + LW - 0.34, y + 0.09, 0.3, 0.3, size=12, color=WARM, bold=True)
     y += bh + bg
 
-xh = y - top - bg
-box(s, XX, top, XW, xh, fill=PANEL2, edge=LINE)
+box(s, XX, top, XW, y - top - bg, fill=PANEL2, edge=LINE)
 text(s, "Cross-cutting", XX + 0.16, top + 0.14, XW - 0.32, 0.3, size=10, color=MUTED,
      bold=True, caps=True)
-cc = [("Audit trail\n& lineage", 0.62), ("Evals &\nreplay harness", 1.35),
-      ("Cost & token\ntelemetry", 2.08), ("Agent identity,\nleast privilege", 2.81)]
-for label, dy in cc:
+for label, dy in [("Audit trail\n& lineage", 0.6), ("Evals &\nreplay harness", 1.3),
+                  ("Cost & token\ntelemetry", 2.0), ("Agent identity,\nleast privilege", 2.7)]:
     text(s, label, XX + 0.16, top + dy, XW - 0.32, 0.6, size=11, color=BODY, line=1.25)
 
 text(s, "◆  Proprietary and defensible. The agent layer is the part we will rewrite most "
-        "often and the part we depend on least.",
-     ML, y + 0.12, CW, 0.4, size=12.5, color=WARM, bold=True)
+        "often and depend on least.",
+     ML, y + 0.1, CW, 0.4, size=12.5, color=WARM, bold=True)
 
 notes(s, """
-Spend the most time here. Read the title as a sentence — it is the design philosophy in
-nine words.
+Spend the most time here. Read the title as a sentence — it is the design philosophy in nine
+words, and it is what makes this defensible to a peer reviewer.
 
 Walk it bottom-up, not top-down: ingestion, ledger, tools, orchestration, agents,
-verification, UI. Bottom-up is the build order and it makes the dependency structure
+verification, surfaces. Bottom-up is the build order and it makes the dependency structure
 obvious.
 
 The point to hammer: the three diamonds are where the value is, and the agent layer is not
-one of them. Prompts are the cheapest and most replaceable component in the system. Teams
-in this category consistently over-invest in the agent layer because it is the visible,
-fun part, then discover they have no verification and no evals and cannot tell whether
-they are improving. We inverted that.
+one of them. Teams in this category over-invest in the agent layer because it is the
+visible, demo-able part, then find they have no verification and no evals and cannot tell
+whether they are improving. We inverted that deliberately.
 
-Second point: note that verification sits ABOVE the agent and BELOW the customer. Nothing
-the agent produces reaches the books without passing deterministic checks first. That is
-an architectural guarantee, not a policy.
+Second point, and it is the one a technical investor will test: verification sits ABOVE the
+agent and BELOW the client. Nothing the agent produces reaches a client's books without
+passing deterministic checks first. That is an architectural guarantee, not a policy or a
+promise about model behaviour.
 
-Expect: "why durable orchestration rather than letting the agent plan?" Answer: a month-end
-close is a known checklist, spanning days, waiting on a client's email, needing compensation
-logic on failure. We model the known process deterministically and use agents only inside
-the judgment-bearing steps. Free-roaming agency over a general ledger is how you get an
-unexplainable restatement.
+Expect: "why durable orchestration rather than letting the agent plan the close?" Answer: a
+close is a known checklist that spans days, waits on client email, and needs compensation
+logic when a step fails. We model the known process deterministically and use agents only
+inside the judgment-bearing steps. Free-roaming agency over a general ledger is how you get
+a restatement you cannot explain.
 """)
 
 
-# ============================================================== 10. LEDGER SUBSTRATE
+# ============================================================== 9. LEDGER
 
 s = new_slide()
 eyebrow(s, "Key component · 1 of 4")
 heading(s, "Ledger substrate: append-only, bitemporal, fully attributed")
 
-text(s, "SaaS updates a row and moves on. Three requirements SaaS never had make that "
-        "impossible for us — and all three are schema decisions, so all three are day-one "
-        "decisions. Retrofitting them is close to impossible.",
+text(s, "Ordinary software updates a row and moves on. Three requirements that no accounting "
+        "package we use has make that impossible for us — and all three are schema decisions, "
+        "so all three must be made on day one. They cannot be retrofitted.",
      ML, 1.9, 11.3, 0.7, size=14.5, color=BODY, line=1.35)
 
 items = [
-    ("Bitemporality — booking date vs. effective date", "h"),
-    ("We must answer \"what did the books say as of 31 March?\" for audit, and — critically — "
-     "to replay an agent against history and score it. Our eval capability only exists "
-     "because the ledger was built this way.", "b"),
+    ("Bitemporality — booking date versus effective date", "h"),
+    ("We must be able to answer \"what did the books say as of 31 March?\" for review and "
+     "for audit. Critically, it is also what lets us replay an agent against a historical "
+     "period and score it. Our entire eval capability depends on this one schema choice.", "b"),
     ("Immutability — corrections are reversing entries, never updates", "h"),
     ("A mutable ledger cannot be explained after the fact, and an agent that can silently "
-     "overwrite is not auditable at any price.", "b"),
+     "overwrite is not defensible at any price.", "b"),
     ("Provenance as a first-class, queryable chain", "h"),
     ("source document → extraction → reasoning trace → tool call → policy applied → "
-     "approver → posting. In SaaS an audit log was a compliance checkbox bolted on the side. "
-     "For us it is load-bearing product: it is how the output gets trusted and sold.", "b"),
-    ("Every actor is typed: human, agent, or system — with the agent's identity, model "
-     "version and prompt revision recorded on the entry.", "note"),
+     "approver → posting. In our current stack an audit log is a compliance artefact bolted "
+     "on the side. Here it is load-bearing: it is how the work product gets defended.", "b"),
+    ("Every actor is typed — human, agent or system — with the agent's identity, model "
+     "version and prompt revision recorded on the entry itself.", "note"),
 ]
-bullets(s, items, ML, 2.7, 7.4, 4.0, size=13.5)
+bullets(s, items, ML, 2.78, 7.4, 3.9, size=13.5)
 
-box(s, ML + 7.85, 2.7, 4.02, 3.6, fill=PANEL)
-text(s, "Why an investor should care", ML + 8.13, 2.94, 3.45, 0.3, size=11, color=MUTED,
-     bold=True, caps=True)
-text(s, "This is the layer a competitor cannot copy by copying our prompts.\n\n"
-        "It is also the layer that decides whether we can ever sell to a regulated or "
-        "audited customer. Deals in this market die on \"show me how this entry was "
-        "produced,\" and that question is answerable only if it was designed for at the "
-        "schema level.\n\nIt is roughly [15–20]% of engineering effort and almost none of "
-        "the demo.",
-     ML + 8.13, 3.32, 3.45, 2.8, size=12.5, color=BODY, line=1.42)
+box(s, ML + 7.85, 2.78, 4.02, 3.5, fill=PANEL)
+text(s, "Why this is the slide that matters", ML + 8.13, 3.0, 3.45, 0.3, size=11,
+     color=MUTED, bold=True, caps=True)
+text(s, "This is the layer a competitor cannot copy by copying our prompts.\n\nIt is also "
+        "what decides whether we can defend this work to a peer reviewer, an auditor or a "
+        "regulator. Engagements die on \"show me how this entry was produced\", and that is "
+        "answerable only if it was designed for at the schema level.\n\nRoughly [15–20]% of "
+        "engineering effort, and almost none of the demo.",
+     ML + 8.13, 3.38, 3.45, 2.7, size=12.5, color=BODY, line=1.42)
 
 notes(s, """
 The line to land: "this is the layer a competitor cannot copy by copying our prompts."
 
-Bitemporality usually needs an example. Use this one: a customer's March books were closed
-in April. In June, an auditor asks what we believed on 31 March and why. A normal SaaS
-database cannot answer that — it only holds current state. We can, because we store both
-when a fact became true and when we learned it. The same mechanism is what lets us take
-last year's real closed books and replay our agents against them to measure accuracy —
-which is our entire eval strategy, and it is only possible because of this schema choice.
+Bitemporality needs a concrete example. Use this one: a client's March books were closed in
+April. In June a reviewer asks what we believed on 31 March and why. A normal database
+cannot answer that — it holds current state only. We can, because we store both when a fact
+became true and when we learned it. The same mechanism is what lets us take last year's real
+closed books and replay our agents against them to measure accuracy, which is our entire
+evaluation strategy.
 
 If a technical investor pushes on cost: yes, append-only bitemporal ledgers are more
-expensive to build and query than mutable tables, and we accepted that deliberately in
-month one because it is unrecoverable later.
+expensive to build and query than mutable tables. We accepted that in month one precisely
+because it is unrecoverable later.
 
-Note the last line — this layer is 15-20% of effort and almost none of the demo. That
-asymmetry is worth stating; it tells them where our engineering judgment is.
+The last line of the panel is worth saying out loud — 15 to 20% of effort and almost none of
+the demo. That asymmetry tells them where our engineering judgment sits.
 """)
 
 
-# ============================================================== 11. TOOL LAYER
+# ============================================================== 10. TOOL LAYER
 
 s = new_slide()
 eyebrow(s, "Key component · 2 of 4")
-heading(s, "Tool layer: an interface for an unknown reasoner, not a known client")
+heading(s, "Tool layer: an interface for an unknown reasoner")
 
-text(s, "This is not our REST API with a different name. A REST API assumes a client that "
+text(s, "This is not a REST API with a different name. A REST API assumes a client that "
         "already knows what it wants. A tool interface assumes a capable, confident, "
         "occasionally wrong caller. Five things differ:",
-     ML, 1.9, 11.3, 0.7, size=14.5, color=BODY, line=1.35)
+     ML, 1.9, 11.3, 0.65, size=14.5, color=BODY, line=1.35)
 
 items = [
     ("Errors must be instructive, because the agent reads them and retries.", "h"),
@@ -739,266 +731,271 @@ items = [
      "difference 50.00\" produces a retry that succeeds. Error-message quality is a "
      "functional requirement here, not a nicety.", "b"),
     ("The tool owns the invariant — not the caller.", "h"),
-    ("In SaaS you trusted your own frontend to send sane data. We invert that: every tool "
+    ("Normally you trust your own frontend to send sane data. We invert that: every tool "
      "assumes a wrong caller and enforces balance, period locks and permissions itself.", "b"),
     ("Idempotency is mandatory, because agents retry.", "h"),
-    ("Granularity is a real tradeoff.", "h"),
+    ("Granularity is a genuine tradeoff.", "h"),
     ("Too fine and the agent burns forty calls and loses the thread; too coarse and it "
      "cannot express intent. Expect to iterate — we have.", "b"),
     ("The surface must stay small and discoverable. Context is a scarce resource; you "
-     "cannot expose four hundred endpoints.", "h"),
+     "cannot expose four hundred endpoints to a reasoner.", "h"),
 ]
-bullets(s, items, ML, 2.7, 7.4, 4.1, size=13.5, gap=7)
+bullets(s, items, ML, 2.72, 7.4, 4.0, size=13.5, gap=7)
 
-box(s, ML + 7.85, 2.7, 4.02, 2.35, fill=TINT_A)
-text(s, "The rule", ML + 8.13, 2.92, 3.45, 0.3, size=11,
-     color=RGBColor(0x0A, 0x53, 0x66), bold=True, caps=True)
+box(s, ML + 7.85, 2.72, 4.02, 2.3, fill=TINT_A, edge=ACCENT)
+text(s, "The rule", ML + 8.13, 2.94, 3.45, 0.3, size=11, color=DEEPA, bold=True, caps=True)
 text(s, "The model never does arithmetic or applies a rule in its head.\n\nEvery state "
         "change is a typed tool call that validates itself and rejects bad input. The "
         "agent's job is choosing which tool with which arguments. The tool's job is being "
         "correct.",
      ML + 8.13, 3.3, 3.45, 1.6, size=12.5, color=BODY, line=1.42)
 
-box(s, ML + 7.85, 5.2, 4.02, 1.1, fill=PANEL)
-text(s, "This is the single highest-leverage design decision in the system.",
-     ML + 8.13, 5.45, 3.45, 0.7, size=13, color=INK, bold=True, line=1.3)
+box(s, ML + 7.85, 5.16, 4.02, 1.1, fill=PANEL)
+text(s, "The single highest-leverage design decision in the system.",
+     ML + 8.13, 5.42, 3.45, 0.7, size=13, color=INK, bold=True, line=1.3)
 
 notes(s, """
-The error-message point is the one that convinces engineers we've actually shipped this.
-Nobody who hasn't built an agent system thinks about error strings as a functional
-requirement. Give the concrete example verbatim — the unbalanced-entry one.
+The error-message point is what convinces engineers we have actually shipped this. Nobody
+who has not built an agent system thinks of error strings as a functional requirement. Give
+the unbalanced-entry example verbatim.
 
-The inverted trust relationship is the second thing to emphasise. Every SaaS engineer has
-written validation in the frontend and trusted it. You cannot do that when the caller is a
-model, so the invariant has to live in the tool. It's a small idea with large consequences
-for how the codebase is organised.
+The inverted trust relationship is the second thing to emphasise, and it resonates with
+anyone who understands financial controls. Every engineer has written validation in the
+frontend and trusted it. You cannot do that when the caller is a model, so the invariant has
+to live in the tool. Small idea, large consequences for how the codebase is organised.
 
-The right-hand rule box is the thing to repeat if you only get one point across: the model
-never does arithmetic. Every wrong number a competitor's demo produces comes from letting
-the model compute instead of calling a tool that computes.
+The rule box is the one to repeat if you get a single point across: the model never does
+arithmetic. Every wrong number in a competitor's demo comes from letting the model compute
+instead of calling something that computes.
 
-If asked about MCP or protocol standardisation: we're compatible with it but it's an
-integration detail, not the hard part. The hard part is designing the right ~30 tools at
-the right granularity with the right invariants, and that took domain experts, not
-protocol work.
+If asked about MCP or tool-protocol standardisation: we are compatible, but it is an
+integration detail, not the hard part. The hard part is designing the right thirty or so
+tools at the right granularity with the right invariants, and that took our accountants,
+not protocol work.
 """)
 
 
-# ============================================================== 12. VERIFICATION
+# ============================================================== 11. VERIFICATION
 
 s = new_slide()
 eyebrow(s, "Key component · 3 of 4")
-heading(s, "Verification and confidence routing: where the business model lives")
+heading(s, "Verification and confidence routing")
 
-text(s, "The single biggest change from SaaS: we move from syntactic validation (is this "
-        "well-formed?) to semantic verification (is this well-formed answer correct?).",
-     ML, 1.88, 11.3, 0.5, size=14.5, color=BODY, line=1.35)
+text(s, "The biggest change from the software we use today: from syntactic validation — is "
+        "this well-formed? — to semantic verification — is this well-formed answer correct?",
+     ML, 1.88, 11.4, 0.5, size=14.5, color=BODY, line=1.35)
 
 cw3 = 3.79
 xs = ML
 tiers = [
-    ("Tier 1 · Hard invariants", TINT_W,
+    ("Tier 1 · Hard invariants", TINT_W, WARM,
      "Deterministic, non-negotiable, run before anything commits. Balance, trial-balance "
      "ties, subledger-to-control ties, reconciliation delta, duplicate detection, period "
      "locks. A failure here is a hard block, never a warning."),
-    ("Tier 2 · Statistical checks", PANEL,
-     "Variance against prior period, unusual vendor/account pairings, distributional "
-     "anomalies. Catches the well-formed-but-wrong class that invariants pass. Produces "
-     "a score, not a verdict."),
-    ("Tier 3 · Routing", PANEL,
-     "Above threshold: auto-post. Below: into the review queue with full context. "
-     "Confidence is derived from verification signals and agreement between independent "
-     "passes — never from asking the model how sure it is."),
+    ("Tier 2 · Statistical checks", PANEL, LINE,
+     "Variance against prior period, unusual vendor and account pairings, distributional "
+     "anomalies. Catches the well-formed-but-wrong class that invariants pass. Produces a "
+     "score, not a verdict."),
+    ("Tier 3 · Routing", PANEL, LINE,
+     "Above threshold: auto-post. Below: into the review queue with full context. Confidence "
+     "is derived from verification signals and agreement between independent passes — never "
+     "from asking the model how sure it is."),
 ]
-for name, fill, body in tiers:
-    box(s, xs, 2.55, cw3, 2.65, fill=fill, edge=WARM if fill is TINT_W else LINE)
-    text(s, name, xs + 0.26, 2.78, cw3 - 0.5, 0.32, size=13.5, color=INK, bold=True)
-    text(s, body, xs + 0.26, 3.2, cw3 - 0.5, 1.9, size=12.5, color=BODY, line=1.4)
+for name, fill, edge, body in tiers:
+    box(s, xs, 2.5, cw3, 2.7, fill=fill, edge=edge)
+    text(s, name, xs + 0.26, 2.73, cw3 - 0.5, 0.32, size=13.5, color=INK, bold=True)
+    text(s, body, xs + 0.26, 3.15, cw3 - 0.5, 1.95, size=12.5, color=BODY, line=1.4)
     xs += cw3 + 0.28
 
-box(s, ML, 5.42, CW, 1.35, fill=PANEL2)
-text(s, "Models are badly calibrated and reliably overconfident. Asking one for a "
-        "confidence score is not a control.", ML + 0.32, 5.62, 6.6, 0.6, size=13.5,
-     color=INK, bold=True, line=1.3)
-text(s, "Every correction a reviewer makes becomes an explicit, auditable rule first and a "
-        "retrieval example second — because rules can be shown to an auditor and embeddings "
-        "cannot. The queue is our service delivery, our data pipeline and our product spec "
-        "at the same time.",
-     ML + 7.2, 5.62, 4.4, 1.0, size=12, color=BODY, line=1.38)
+box(s, ML, 5.42, 6.6, 1.45, fill=PANEL2)
+text(s, "Models are badly calibrated and reliably overconfident. Asking one for a confidence "
+        "score is not a control.", ML + 0.3, 5.62, 6.0, 0.6, size=13.5, color=INK,
+     bold=True, line=1.3)
+text(s, "We derive confidence from tier-1 and tier-2 signals and from agreement between "
+        "independent passes, then calibrate against known outcomes.",
+     ML + 0.3, 6.24, 6.0, 0.5, size=12, color=BODY, line=1.35)
+
+box(s, ML + 6.9, 5.42, 5.0, 1.45, fill=TINT_W)
+text(s, "The threshold is the business case", ML + 7.18, 5.6, 4.45, 0.28, size=11,
+     color=WARM, bold=True, caps=True)
+text(s, "Move it up and hours fall but error risk rises; move it down and we have automated "
+        "nothing. The entire engineering programme is raising it safely, per category, with "
+        "the movement measured.",
+     ML + 7.18, 5.92, 4.45, 0.85, size=12, color=DEEPW, line=1.38)
 
 notes(s, """
 This is the technical heart of the deck. If they remember one architecture slide, it should
 be this one.
 
-Open with the syntactic-to-semantic line. Then the three tiers, briefly. Then spend your
-remaining time on the bottom-left box, because it is the most common failure in the
-category and stating it clearly is a credibility signal: models are overconfident, so
+Open with the syntactic-to-semantic line, then the three tiers briefly. Spend your remaining
+time on the bottom-left box, because it is the most common failure in the category and
+stating it clearly is a strong credibility signal: models are overconfident, so
 self-reported confidence is not a control. We derive confidence from verification signals
-and from agreement between independent passes.
+and from agreement between independent passes, and we calibrate it against known outcomes.
 
-Then the commercial translation: the routing threshold IS the business model. Move it up
-and margin improves but error rate rises; move it down and we're a services company. The
-whole engineering programme is about raising the threshold safely, and that is measurable
-week over week.
+Then the bottom-right box, which is the commercial translation. The routing threshold IS the
+business case. Every point of auto-post rate is a measurable number of hours. That is why
+this is a forecast rather than a hope: we can see the rate per transaction category and we
+know what each point is worth in staff time.
 
-Say explicitly: this is why our margin slope is a forecast rather than a hope. We can see
-the auto-post rate per transaction category and we know what each point is worth.
+Likely question: "what is your current auto-post rate?" Have the real number per category
+with the denominator defined. If it is early, give the number and the trend. Never give a
+blended number without the denominator — a technical investor will assume you are hiding
+the mix, and they will be right to.
 
-Likely question: "what's your current auto-post rate?" Have the real number by category,
-with the denominator defined. If it's early, give the number and the trend. Never give a
-blended number without the denominator — a technical investor will assume you're hiding
-the mix.
+Also worth volunteering: every reviewer correction becomes an explicit, versioned rule
+first and a retrieval example second, because a rule can be shown to a reviewer and an
+embedding cannot.
 """)
 
 
-# ============================================================== 13. EVALS
+# ============================================================== 12. EVALS
 
 s = new_slide()
 eyebrow(s, "Key component · 4 of 4")
-heading(s, "Evals and replay: the artefact competitors cannot copy")
+heading(s, "Evals and replay: turning our archive into a measurement system")
 
-text(s, "A SaaS feature is correct or it is a bug. An agent capability has a distribution. "
-        "You stop asking \"does it work\" and start asking \"at what rate, on what input "
-        "distribution, with what failure modes.\" That changes engineering practice more "
-        "than any other single thing.",
-     ML, 1.9, 11.3, 0.75, size=14.5, color=BODY, line=1.35)
+text(s, "A normal software feature is correct or it is a bug. An agent capability has a "
+        "distribution. You stop asking \"does it work\" and start asking \"at what rate, on "
+        "what input distribution, with what failure modes.\" That changes engineering "
+        "practice more than anything else here.",
+     ML, 1.9, 11.3, 0.7, size=14.5, color=BODY, line=1.35)
 
 items = [
-    ("CI now contains statistical tests.", "h"),
-    ("A 2% regression may be noise or a catastrophe, and only eval volume tells you which.", "b"),
+    ("Ground truth comes from our own closed books.", "h"),
+    ("We replay agents against historical periods and score against what our accountant "
+     "actually did, then against what review corrected. No other party can assemble this "
+     "corpus for our client mix.", "b"),
+    ("CI contains statistical tests.", "h"),
+    ("A two-point regression may be noise or a catastrophe, and only eval volume tells you "
+     "which.", "b"),
     ("Bug reports are not reproducible.", "h"),
     ("Full trace capture on every run — prompt, context, tool calls, model version — or we "
      "are blind in production.", "b"),
     ("Model upgrades are breaking changes to behaviour we never specified.", "h"),
     ("Version-pin, shadow-eval every candidate model against the corpus before any swap, "
-     "keep a fallback. This is a standing pipeline, not a project.", "b"),
-    ("Ground truth comes from real closed books.", "h"),
-    ("We replay agents against historical months and score against what the accountant "
-     "actually did. Slow, unglamorous, requires domain experts — which is exactly why it "
-     "is defensible.", "b"),
+     "keep a fallback. A standing pipeline, not a project.", "b"),
 ]
-bullets(s, items, ML, 2.78, 7.4, 4.0, size=13.5, gap=7)
+bullets(s, items, ML, 2.78, 7.4, 3.9, size=13.5, gap=7)
 
-box(s, ML + 7.85, 2.78, 4.02, 3.55, fill=TINT_W, edge=WARM)
-text(s, "The roadmap unit changes", ML + 8.13, 3.0, 3.45, 0.3, size=11, color=WARM,
+box(s, ML + 7.85, 2.78, 4.02, 3.45, fill=TINT_W, edge=WARM)
+text(s, "The reporting unit changes", ML + 8.13, 3.0, 3.45, 0.3, size=11, color=WARM,
      bold=True, caps=True)
-text(s, "SaaS roadmaps listed features.\n\nOurs lists accuracy on a category:\n"
+text(s, "Software roadmaps list features.\n\nOurs lists accuracy on a category:\n"
         "\"raise auto-post rate on the ambiguous-vendor bucket from 71% to 88%.\"\n\n"
-        "Different planning, different staffing, different definition of done — and a "
-        "roadmap whose progress is measured rather than asserted.",
-     ML + 8.13, 3.4, 3.45, 2.8, size=12.5, color=BODY, line=1.42)
+        "Different planning, different staffing, and a roadmap whose progress is measured "
+        "rather than asserted — which is also how we intend to report to a board.",
+     ML + 8.13, 3.38, 3.45, 2.65, size=12.5, color=BODY, line=1.42)
 
 notes(s, """
-Two things to get across.
+Lead with the first bullet, not the theory — it is the firm's unfair advantage stated as an
+engineering practice. Our archive is not a nice dataset to have; it is the measurement
+instrument that makes every other claim in this deck checkable.
 
-First, that evals are harder than the product and we know it. Teams underinvest here, lose
-the ability to tell whether they're improving, and then optimise on vibes. Our eval corpus
-is the most valuable engineering artefact we will build, and it needs a data pipeline plus
-domain experts — not a prompt engineer.
+Second, be honest that evals are harder than the product. Teams underinvest here, lose the
+ability to tell whether they are improving, and end up optimising on impressions. Our eval
+corpus needs a data pipeline plus senior accountant time to label — that senior time is a
+real cost and it shows up in the phase 2 investment slide.
 
-Second, the roadmap-unit change on the right. This is genuinely useful to an investor
-because it tells them what our board reporting will look like. We will not come to you with
-"we shipped feature X." We will come with "auto-post rate on this category moved from 71 to
-88, here is what that is worth in gross margin." That's a much better governance
-relationship and you should say so.
+The panel on the right is genuinely useful to an investor because it tells them what board
+reporting will look like. We will not come with "we shipped a feature." We will come with
+"auto-post rate on this category moved from 71 to 88, here is what that is worth in hours."
+Say that explicitly — it is a better governance relationship and it signals we know what to
+measure.
 
-The competitive point: prompts are copyable in an afternoon. A corpus of thousands of
-verified closes, with the reviewer corrections attached, is years of accumulated work tied
-to customer relationships. When someone asks what stops a well-funded competitor, this is
-the honest answer — this and permission.
+The competitive point, if pressed on what stops a well-funded entrant: prompts copy in an
+afternoon. A corpus of thousands of reviewed closes with the corrections attached is years
+of accumulated professional work tied to client relationships. That and write permission are
+the honest answers.
 """)
 
 
-# ============================================================== 14. HARD PROBLEMS
+# ============================================================== 13. HARD PROBLEMS
 
 s = new_slide()
 eyebrow(s, "Technical risk")
 heading(s, "The two hard problems, stated plainly")
 
-box(s, ML, 2.0, 5.79, 4.35, fill=PANEL, edge=LINE)
-text(s, "1 · Reliability compounds badly", ML + 0.3, 2.24, 5.2, 0.35, size=17,
-     color=INK, bold=True)
+box(s, ML, 2.0, 5.79, 4.3, fill=PANEL, edge=LINE)
+text(s, "1 · Reliability compounds badly", ML + 0.3, 2.24, 5.2, 0.35, size=17, color=INK, bold=True)
 text(s, "95% per step across 20 steps is 36% end-to-end.", ML + 0.3, 2.68, 5.2, 0.55,
      size=15, color=WARM, bold=True, line=1.25)
-text(s, "This is the central engineering problem of the category, and there is no prompt "
-        "that fixes it. The only real answer is architectural:",
-     ML + 0.3, 3.28, 5.2, 0.62, size=13, color=BODY, line=1.35)
-r1 = [
-    ("Shorten agentic spans; keep deterministic orchestration between them", "b"),
-    ("Make every step independently verifiable", "b"),
-    ("Gate before commit, always", "b"),
-    ("Prefer many short verified hops to one long autonomous chain", "b"),
-]
-bullets(s, r1, ML + 0.3, 4.02, 5.2, 1.9, size=12.5, gap=6)
-text(s, "Any plan that assumes long autonomous chains without this will fail in production. "
-        "Treat it as a filter when you look at our competitors.",
-     ML + 0.3, 5.62, 5.2, 0.6, size=12, color=WARM, bold=True, line=1.35)
+text(s, "The central engineering problem of the category, and no prompt fixes it. The only "
+        "real answer is architectural:",
+     ML + 0.3, 3.26, 5.2, 0.6, size=13, color=BODY, line=1.35)
+bullets(s, [("Shorten agentic spans; keep deterministic orchestration between them", "b"),
+            ("Make every step independently verifiable", "b"),
+            ("Gate before commit, always", "b"),
+            ("Prefer many short verified hops to one long autonomous chain", "b")],
+        ML + 0.3, 3.98, 5.2, 1.8, size=12.5, gap=6)
+text(s, "Any plan assuming long autonomous chains without this will fail in production. Use "
+        "it as a filter on anyone else you look at.",
+     ML + 0.3, 5.6, 5.2, 0.6, size=12, color=WARM, bold=True, line=1.35)
 
-box(s, ML + 6.11, 2.0, 5.79, 4.35, fill=PANEL, edge=LINE)
-text(s, "2 · The security model inverts", ML + 6.41, 2.24, 5.2, 0.35, size=17,
-     color=INK, bold=True)
+box(s, ML + 6.11, 2.0, 5.79, 4.3, fill=PANEL, edge=LINE)
+text(s, "2 · The security model inverts", ML + 6.41, 2.24, 5.2, 0.35, size=17, color=INK, bold=True)
 text(s, "An actor with authority, taking instructions from untrusted content.",
      ML + 6.41, 2.68, 5.2, 0.55, size=15, color=WARM, bold=True, line=1.25)
-text(s, "In SaaS, code was trusted and users were untrusted. Our agent is neither — it acts "
-        "with write authority while reading a vendor's PDF or an inbound email. That is a "
-        "genuinely new vulnerability class.",
-     ML + 6.41, 3.28, 5.2, 0.9, size=13, color=BODY, line=1.35)
-r2 = [
-    ("Scoped, least-privilege credentials per task", "b"),
-    ("No single tool both reads untrusted content and takes irreversible action", "b"),
-    ("Separation of duties in code: an agent cannot approve its own entry", "b"),
-    ("Hard period locks; all document-derived text treated as tainted", "b"),
-]
-bullets(s, r2, ML + 6.41, 4.32, 5.2, 1.9, size=12.5, gap=6)
+text(s, "Normally code is trusted and users are untrusted. Our agent is neither — it acts "
+        "with write authority while reading a vendor's PDF or an inbound email. A genuinely "
+        "new vulnerability class, and our licence is what is exposed.",
+     ML + 6.41, 3.26, 5.2, 0.9, size=13, color=BODY, line=1.35)
+bullets(s, [("Scoped, least-privilege credentials per task", "b"),
+            ("No single tool both reads untrusted content and takes irreversible action", "b"),
+            ("Separation of duties in code: an agent cannot approve its own entry", "b"),
+            ("Hard period locks; document-derived text treated as tainted", "b")],
+        ML + 6.41, 4.28, 5.2, 1.8, size=12.5, gap=6)
 
 text(s, "Two more we track and do not minimise. The 60/40 trap: the easy majority of "
-        "transactions automates fast and creates false confidence, while the residual holds "
-        "most of the labour cost — so we instrument where hours go, not where transactions "
-        "are. And migration onto our substrate: large, correctness-critical, and the first "
-        "thing every customer needs.",
+        "transactions automates fast and creates false confidence while the residual holds "
+        "most of the hours — so we instrument activity time, not transaction counts. And "
+        "migration onto the new substrate: large, correctness-critical, and the first thing "
+        "every engagement needs.",
      ML, 6.48, CW, 0.6, size=12, color=BODY, line=1.32)
 
 notes(s, """
-Do not skip this slide and do not soften it. Volunteering the hard problems, with the
-mitigations already built, is the strongest credibility move available in an AI pitch —
-because every sophisticated investor already knows about compounding error rates and is
-waiting to see whether you do.
+Do not skip this slide and do not soften it. Volunteering the hard problems with mitigations
+already built is the strongest credibility move available, because every sophisticated
+investor already knows about compounding error rates and is waiting to see whether we do.
 
-On reliability: the arithmetic is the argument. 0.95^20 = 0.36. Say the number. Then make
-clear the fix is architectural, not a better prompt, and that our architecture (slide 9)
-was designed around exactly this — short spans, verification between them, deterministic
-orchestration.
+On reliability: the arithmetic is the argument. 0.95^20 = 0.36. Say the number out loud.
+Then make clear the fix is architectural rather than a better prompt, and that the
+architecture two slides back was designed around exactly this — short spans, verification
+between them, deterministic orchestration.
 
-Offer the filter explicitly: "when you evaluate others in this space, ask how long their
-autonomous chains are and what verifies each step. It's a fast way to tell who has shipped."
+Offer the filter explicitly: "when you look at others in this space, ask how long their
+autonomous chains run and what verifies each step. It is a fast way to tell who has shipped
+something."
 
-On security: prompt injection into an agent with ledger write access and bank access is the
-scenario that should worry a CFO, and we should be the ones to raise it. Walk the four
-mitigations. The separation-of-duties-in-code point resonates with anyone who knows
-financial controls — we applied a human control framework to a software actor.
+On security: prompt injection into an agent with ledger and bank write access is the
+scenario that should worry a partner, and we should be the ones to raise it. Walk the four
+mitigations. Separation of duties in code lands especially well with this audience — we took
+a human control framework and applied it to a software actor.
 
-The 60/40 trap: this is why we measure hours, not transaction counts. A competitor
-reporting "we automate 80% of transactions" may have automated 30% of the cost.
+Our own liability is the honest framing of the stakes here. It is not an abstract product
+risk; it is the firm's licence and reputation. Saying so is why the controls line in the
+phase 2 budget is not negotiable.
 """)
 
 
-# ============================================================== 15. EFFORT ALLOCATION
+# ============================================================== 14. EFFORT SHAPE
 
 s = new_slide()
-eyebrow(s, "Where the work goes")
+eyebrow(s, "Engineering shape")
 heading(s, "Building this is a different engineering shape")
 
-text(s, "In SaaS the system of record was the smallest, most stable, most valuable part of "
-        "the codebase, and the interface was the largest and most churn-prone. The ledger "
-        "under a major accounting product is a few thousand lines that barely changed in a "
-        "decade; the UI around it is hundreds of thousands that changed every sprint.",
-     ML, 1.88, 11.4, 0.75, size=14, color=BODY, line=1.35)
+text(s, "In conventional accounting software the system of record is the smallest, most "
+        "stable, most valuable part of the codebase and the interface is the largest and most "
+        "churn-prone. The ledger under a major package is a few thousand lines that barely "
+        "changed in a decade; the UI around it is hundreds of thousands that changed every "
+        "sprint.",
+     ML, 1.88, 11.4, 0.78, size=14, color=BODY, line=1.35)
 
-hdr = [["Layer", "SaaS", "Agent-native", "Nature of the change"]]
+hdr = [["Layer", "Conventional", "Ours", "Nature of the change"]]
 rows = [
     ["System of record", "10–15%", "15–20%", "Same concept, far harder requirements"],
     ["Tool layer (typed actions)", "—", "15–20%", "New — and not the same as a REST API"],
-    ["Verification & guardrails", "—", "~15%", "New — no SaaS analogue at all"],
+    ["Verification & guardrails", "—", "~15%", "New — no analogue in the software we use"],
     ["Evals & ground-truth corpus", "—", "10–15%", "New — is our test suite and our spec"],
     ["Durable orchestration", "~2%", "~10%", "Qualitatively different from cron and queues"],
     ["Agent layer (prompts, memory)", "—", "~10%", "New, and smaller than people expect"],
@@ -1006,225 +1003,275 @@ rows = [
     ["Integrations", "10–15%", "~10%", "Similar, plus agent-driven fallback"],
     ["Platform", "~15%", "~15%", "Plus agent identity and cost telemetry"],
 ]
-table(s, hdr + rows, ML, 2.78, CW, [3.3, 1.5, 1.85, 5.24], row_h=0.35, head_h=0.42,
+table(s, hdr + rows, ML, 2.74, CW, [3.3, 1.7, 1.65, 5.24], row_h=0.35, head_h=0.42,
       size=11.5, emphasize_col=2)
 
-box(s, ML, 6.42, CW, 0.85, fill=INK)
-text(s, "SaaS spent its engineering budget making a human effective at the interface. "
-        "We spend ours making a machine's output provable at the substrate.",
-     ML + 0.32, 6.62, CW - 0.64, 0.5, size=14.5, color=WHITE, bold=True, line=1.3)
+box(s, ML, 6.36, CW, 0.72, fill=INK)
+text(s, "Conventional software spent its engineering budget making a human effective at the "
+        "interface. We spend ours making a machine's output provable at the substrate.",
+     ML + 0.32, 6.52, CW - 0.64, 0.44, size=13.5, color=WHITE, bold=True, line=1.3)
 
 notes(s, """
-Percentages are directional — the shape of such codebases rather than measured data. Say
-that out loud; a technical investor will respect the caveat and stop probing the digits.
+Percentages are directional — the shape of such codebases rather than measured data. Say so;
+a technical investor will respect the caveat and stop probing the digits.
 
-Two observations to draw out:
+Two observations to draw out.
 
-The interface absorbed all the heterogeneity in SaaS. Every new segment, edge case and
-regulatory variation arrived as a new screen, field or report, while the domain model
-absorbed almost none of it. Interface complexity is customer diversity projected onto
-deterministic code. Agents absorb that diversity in the model instead, which is why the UI
-share roughly halves.
+The interface absorbed all the heterogeneity in conventional software. Every new client
+segment, edge case and regulatory variation arrived as a new screen, field or report, while
+the domain model absorbed almost none of it. Interface complexity is client diversity
+projected onto deterministic code. Agents absorb that diversity in the model instead, which
+is why the UI share roughly halves and why we need one excellent surface rather than forty
+screens.
 
-The agent layer is one of the smallest lines. Repeat it here — it's the second time they'll
-hear it and it's the most counterintuitive thing in the deck.
+The agent layer is one of the smallest lines. This is the third time they will hear it and
+it is still the most counterintuitive thing in the deck.
 
-The closing line in the dark box is the one-sentence summary of the entire technical
-section. Deliver it and stop; it is a good place to take questions before the roadmap.
+The closing bar is the one-sentence summary of the technical section. Deliver it and stop —
+this is the right place to take questions before the phase 2 detail.
 
-If asked "so is your headcount lower than a comparable SaaS company?" — no, it's differently
-shaped: fewer frontend engineers, more data and infra engineers, plus domain experts inside
-the loop. Slide 17.
+If asked "is your headcount lower than a software company's?" — no, differently shaped:
+fewer frontend engineers, more data and infrastructure engineering, plus our own accountants
+inside the loop rather than beside it.
 """)
 
 
-# ============================================================== 16. ROADMAP
+# ============================================================== 15. PHASE 2 WORKSTREAMS
 
 s = new_slide()
-eyebrow(s, "Roadmap")
-heading(s, "Wrap, then own the record, then own the filing")
+eyebrow(s, "Phase 2 · technical plan")
+heading(s, "Owning the system of record: the eight workstreams", y=0.78)
 
-pw = 3.79
-px = ML
-phases = [
-    ("Phase 1 · [0–9 mo]", "Wrap the incumbent", TINT_A, RGBColor(0x0A, 0x53, 0x66), [
-        "Agent layer over QBO / Xero via API — low trust barrier, fast distribution",
-        "Build the substrate in parallel, shadow-mode: our ledger mirrors theirs",
-        "Ingestion, tool layer, tier-1 invariants, exception console",
-        "5–10 design-partner firms; every close manually reviewed",
-        "Goal: eval corpus exists and auto-post rate is measurable by category",
-    ]),
-    ("Phase 2 · [9–24 mo]", "Own the system of record", PANEL, INK, [
-        "Our bitemporal ledger becomes primary; we write out to QBO for the accountant's comfort",
-        "Migration and backfill tooling — correctness-critical, needed by every customer",
-        "Tier-2 statistical checks; confidence routing live; the threshold starts moving",
-        "Durable orchestration of the full close checklist",
-        "Goal: hours per close down [X]%, gross margin slope visible per cohort",
-    ]),
-    ("Phase 3 · [24 mo +]", "Own the output", PANEL, INK, [
-        "Filings, sales tax, advisory and reporting on top of the same substrate",
-        "Outcome-based pricing at scale; per-entity economics proven",
-        "Audit-package export as a product; attestation partnerships",
-        "Self-serve for the long-tail SMB once auto-post rate clears the bar",
-        "Goal: margin profile converging on software, not services",
-    ]),
+# thin phase context strip
+strip = [("Phase 1 — wrap the incumbent", PANEL, MUTED, "underway"),
+         ("Phase 2 — own the record", TINT_W, DEEPW, "we are here"),
+         ("Phase 3 — own the output", PANEL, MUTED, "not yet scoped")]
+sx = ML
+for label, fill, col, tag in strip:
+    box(s, sx, 1.48, 3.79, 0.44, fill=fill, edge=WARM if fill is TINT_W else LINE)
+    text(s, label, sx + 0.2, 1.56, 2.35, 0.28, size=11, color=col, bold=True)
+    text(s, tag, sx + 2.6, 1.58, 1.0, 0.24, size=9.5, color=col, align=PP_ALIGN.RIGHT)
+    sx += 3.79 + 0.28
+
+ws = [
+    ("1 · Ledger cutover and dual-write",
+     "Our bitemporal ledger becomes primary; the incumbent becomes a downstream mirror via a "
+     "write-through adapter. Dual-write with an automated diff harness on every entry — zero "
+     "diff across three consecutive closes before we flip primary."),
+    ("2 · Migration and opening balances",
+     "Import prior-year trial balances, open AR/AP, bank history, fixed-asset registers and "
+     "depreciation schedules. Reconstruct the trial balance and tie it to the prior closing "
+     "TB per entity — a hard gate. Imported records carry a distinct provenance class."),
+    ("3 · Verification tier 2 and calibration",
+     "Variance and pairing checks, distributional anomaly detection, and a calibration "
+     "harness producing reliability curves per transaction category. Thresholds move only on "
+     "measured calibration, never on impression."),
+    ("4 · Durable orchestration of the full close",
+     "The close checklist as a resumable state machine, one instance per entity per period. "
+     "Human-wait steps with SLA timers and escalation, compensation logic on failure, and "
+     "checkpointed model decisions so a resume never silently re-decides."),
+    ("5 · Evals at scale",
+     "Corpus expansion across entities and periods with per-category labels; replay harness "
+     "against historical closes; shadow-eval gating on every model change; regression suite "
+     "in CI with confidence intervals rather than pass/fail."),
+    ("6 · Exception console throughput",
+     "One surface, built for a reviewer clearing a large queue quickly: keyboard-first, full "
+     "context inline, no navigation. Every correction becomes a proposed policy rule, "
+     "reviewed and versioned — not a silent embedding."),
+    ("7 · Controls, audit package and SOC 2",
+     "Agent identity and least privilege per task, separation of duties enforced in code, "
+     "taint tracking on document-derived text, and a one-click audit package (entry to full "
+     "lineage) built to survive external review. SOC 2 Type II readiness."),
+    ("8 · Cost telemetry and model routing",
+     "Per-entity, per-close token accounting; cheap models for extraction and classification, "
+     "expensive ones for judgment; aggressive caching. Cost per close visible per entity and "
+     "per category, tracked against loaded labour cost."),
 ]
-for label, title_, fill, tcol, pts in phases:
-    box(s, px, 1.95, pw, 4.35, fill=fill, edge=ACCENT if fill is TINT_A else LINE)
-    text(s, label, px + 0.26, 2.18, pw - 0.5, 0.3, size=11, color=tcol, bold=True, caps=True)
-    text(s, title_, px + 0.26, 2.52, pw - 0.5, 0.4, size=16.5, color=INK, bold=True)
-    bullets(s, [(p, "b") for p in pts], px + 0.26, 3.06, pw - 0.5, 3.1, size=12, gap=8)
-    px += pw + 0.28
-
-text(s, "Sequencing logic: we do not have to beat an incumbent ledger on day one. Wrapping "
-        "buys distribution and, more importantly, buys the ground-truth data that makes "
-        "phase 2 possible. The substrate is built from month one regardless — it cannot be "
-        "retrofitted.",
-     ML, 6.5, CW, 0.7, size=13, color=BODY, line=1.35)
+cw = 5.806
+ch, cg = 1.16, 0.08
+for i, (t, b) in enumerate(ws):
+    x = ML + (i % 2) * (cw + 0.28)
+    y = 2.12 + (i // 2) * (ch + cg)
+    hl = i in (0, 1)
+    card(s, x, y, cw, ch, t, b,
+         fill=TINT_W if hl else PANEL, edge=WARM if hl else LINE,
+         tcol=DEEPW if hl else INK, tsize=12.5, bsize=10.5)
 
 notes(s, """
-The sequencing logic at the bottom is the point of the slide; the bullets are supporting
-detail. Two reasons to wrap first: distribution and trust are easier, and — the real reason
-— wrapping generates the labelled ground truth we need before we can justify owning the
-record.
+This is the slide the phase 2 conversation lives on. The three-phase strip at the top is
+deliberately thin — the phasing is already agreed, so do not re-litigate it. Point at it
+once and move down.
 
-Be explicit about what we do NOT defer: the substrate. The ledger, provenance and tool
-layer are built from month one even while we're wrapping, because they are schema decisions
-that cannot be retrofitted. A competitor who ships a QBO wrapper without a substrate looks
-faster for a year and then cannot make phase 2 at all. That is the strategic bet in one
-sentence.
+Workstreams 1 and 2 are highlighted because they are the critical path and the two that can
+sink the phase. Everything else can slip a month; these cannot.
 
-Flag migration honestly as the most underestimated line item in phase 2. Bringing a
-customer's historical books onto our substrate is large, correctness-critical and the first
-thing every single customer asks for.
+On workstream 1, the detail that matters is the dual-write diff harness. We do not flip the
+primary ledger on a judgment call. We run both systems in parallel, diff every entry
+automatically, and require zero diff across three consecutive closes before switching. That
+is a testable gate rather than a decision, and it is what makes the cutover defensible to a
+partner group.
 
-[FILL BEFORE USE] the bracketed durations and the phase-2 hours-per-close target. Use your
-real design-partner data; do not present illustrative timings as commitments.
+On workstream 2, say plainly that migration is the most underestimated line item in this
+kind of programme. Reconstructing an opening trial balance that ties to the prior
+accountant's closing balance, per entity, is unglamorous and correctness-critical, and every
+engagement needs it before anything else works. We have budgeted it as a first-class
+workstream rather than a task, and imported records are tagged with a distinct provenance
+class so we never claim verified lineage we do not have.
+
+Workstream 4's checkpointing detail is worth ten seconds with a technical audience: on
+resume, a durable workflow must not silently re-run a model call and get a different answer.
+We checkpoint the decision, not just the step. Very few teams get this right.
+
+Workstream 7 exists because our licence is the asset at risk. Do not let it be read as
+overhead.
 """)
 
 
-# ============================================================== 17. RESOURCES
+# ============================================================== 16. PHASE 2 INVESTMENT
 
 s = new_slide()
-eyebrow(s, "Resources")
-heading(s, "What it takes: a differently-shaped team")
+eyebrow(s, "Phase 2 · investment")
+heading(s, "What phase 2 requires, and what gates each workstream")
 
-text(s, "Illustrative for the phase-1 to early-phase-2 build. Fewer frontend engineers than "
-        "a comparable SaaS company, more data and infrastructure engineering, and domain "
-        "experts inside the system rather than beside it.",
-     ML, 1.86, 11.3, 0.55, size=13.5, color=BODY, line=1.35)
-
-hdr = [["Function", "Ph. 1", "Ph. 2", "Why this is not a normal SaaS org"]]
+hdr = [["Workstream", "FTE", "Window", "The gate it must pass"]]
 rows = [
-    ["Ledger / backend platform", "3", "5", "Bitemporal append-only substrate, provenance, migration tooling"],
-    ["Tool layer & orchestration", "2", "3", "Typed invariant-enforcing actions; durable long-running workflows"],
-    ["Agent / applied ML", "2", "3", "Smaller than expected — prompts are the replaceable part"],
-    ["Evals & data engineering", "2", "4", "Ground-truth corpus, replay harness, ingestion quality, entity resolution"],
-    ["Verification & controls", "1", "2", "Invariants, anomaly detection, confidence calibration"],
-    ["Product & exception-console UI", "2", "3", "One surface, done extremely well — not forty screens"],
-    ["Accountants in the loop", "3", "6–10", "Service delivery, labelling function and spec authors, simultaneously"],
-    ["Security / compliance / SOC 2", "0.5", "1.5", "Agent identity, least privilege, audit posture as a sales asset"],
-    ["GTM (firm-led)", "1", "4", "Sold to firms on gross-margin uplift, not to SMBs on features"],
+    ["1 · Ledger cutover, dual-write", "3", "m0–m6", "Zero automated diff across three consecutive closes before primary flips"],
+    ["2 · Migration, opening balances", "2", "m0–m9", "Reconstructed TB ties to prior closing TB, per entity, no manual plug"],
+    ["3 · Verification tier 2, calibration", "2", "m2–m8", "Calibration error under [Y] on the top five transaction categories"],
+    ["4 · Durable close orchestration", "2", "m3–m10", "Full checklist resumable; no re-decision on resume, proven by replay"],
+    ["5 · Evals at scale", "3", "m0–m12", "Every model change gated by corpus regression before it reaches an engagement"],
+    ["6 · Exception console", "2", "m4–m10", "Reviewer clears [N] items/hour at no measured loss of accuracy"],
+    ["7 · Controls, audit package, SOC 2", "1.5", "m3–m12", "One external review accepts the audit package unmodified"],
+    ["8 · Cost telemetry, model routing", "1", "m2–m6", "Cost per close visible per entity and per category, live"],
 ]
-table(s, hdr + rows, ML, 2.44, CW, [3.25, 0.9, 0.9, 6.84], row_h=0.35, head_h=0.4,
-      size=11.5)
+table(s, hdr + rows, ML, 1.95, CW, [3.2, 0.62, 0.85, 7.22], row_h=0.375, head_h=0.42,
+      size=11)
 
-box(s, ML, 6.08, 5.79, 0.94, fill=PANEL)
-text(s, "Non-headcount costs to underwrite", ML + 0.28, 6.24, 5.25, 0.28, size=10.5,
-     color=MUTED, bold=True, caps=True)
-text(s, "Inference (a real COGS line, not R&D) · data acquisition for the corpus · "
-        "SOC 2 and audit readiness · E&O insurance · [licensed CPA of record]",
-     ML + 0.28, 6.54, 5.25, 0.42, size=11, color=BODY, line=1.28)
+box(s, ML, 5.42, 3.79, 1.6, fill=PANEL)
+text(s, "Engineering", ML + 0.26, 5.6, 3.3, 0.28, size=10.5, color=MUTED, bold=True, caps=True)
+text(s, "~16.5 FTE across 12 months. Weighted to substrate, evals and controls — not to the "
+        "agent layer, which is [1.5] of that total.",
+     ML + 0.26, 5.92, 3.3, 0.95, size=11.5, color=BODY, line=1.35)
 
-box(s, ML + 6.11, 6.08, 5.79, 0.94, fill=TINT_W)
-text(s, "Capital ask", ML + 6.39, 6.24, 5.25, 0.28, size=10.5, color=WARM, bold=True, caps=True)
-text(s, "[$X] for [N] months to reach [auto-post rate / entities / margin milestone]. "
-        "Fill from your own model — do not present illustrative figures as a plan.",
-     ML + 6.39, 6.54, 5.25, 0.42, size=11, color=RGBColor(0x7A, 0x3B, 0x08), line=1.28)
+box(s, ML + 4.07, 5.42, 3.79, 1.6, fill=PANEL)
+text(s, "Firm-side, non-engineering", ML + 4.33, 5.6, 3.3, 0.28, size=10.5, color=MUTED,
+     bold=True, caps=True)
+text(s, "[6–10] accountants in the loop: delivery, labelling and spec authorship at once. "
+        "Senior review time to label the corpus is a real cost — budget it explicitly.",
+     ML + 4.33, 5.92, 3.3, 0.95, size=11.5, color=BODY, line=1.35)
+
+box(s, ML + 8.14, 5.42, 3.75, 1.6, fill=TINT_W, edge=WARM)
+text(s, "Non-headcount", ML + 8.4, 5.6, 3.25, 0.28, size=10.5, color=WARM, bold=True, caps=True)
+text(s, "Inference is COGS, not R&D · SOC 2 Type II audit · E&O and liability review · "
+        "data infrastructure · engagement-letter and consent work",
+     ML + 8.4, 5.92, 3.25, 0.95, size=11.5, color=DEEPW, line=1.35)
+
+text(s, "[FILL: total phase 2 investment, and the loaded-cost comparison against the hours "
+        "it removes. Headcount above is illustrative shape — do not present it as a hiring plan.]",
+     ML, 7.1, 10.7, 0.3, size=10.5, color=WARM, bold=True)
 
 notes(s, """
-Headcount figures are illustrative shape, not a hiring plan — say so, then talk about the
-shape rather than the digits, because the shape is the insight.
+The gate column is the point of this slide. Every workstream has a testable exit condition
+rather than a delivery date, which is how you should ask us to govern it. Read two or three
+of the gates out loud — they are unusually concrete for a technology plan and that is the
+impression to leave.
 
-Three things to draw out:
+Three things to draw out from the bottom panels.
 
-"Accountants in the loop" is the largest single line in phase 2 and it is deliberate. They
-are simultaneously service delivery, our labelling function, and our spec authors. An
-investor may read this as services-y headcount that hurts the multiple. The answer: it
-grows sublinearly with revenue and it is what produces the eval corpus, which is the moat.
-Show the ratio of entities-per-reviewer improving over cohorts — that ratio is the whole
-argument, and it's the number to put on a board slide every month.
+The agent layer is about 1.5 of 16.5 FTE. Point at it. It is the fourth time in the deck
+that the demo-able part turns out to be the small part, and by now it should read as
+discipline rather than as an oversight.
 
-Evals and data engineering is larger than applied ML. That is intentional and it is the
-opposite of how most AI startups staff. Prompts are cheap; ground truth is not.
+Accountants in the loop are simultaneously delivery, labelling function and spec authors.
+An investor may read this as services headcount that hurts the multiple. The answer: it
+grows sublinearly with revenue and it produces the corpus that is the moat. The number to
+put on a board slide every month is entities per reviewer, and it should improve every
+quarter.
 
-Inference sits in COGS, not R&D. Most decks in this category get this wrong. Putting it in
-COGS is what makes the gross-margin slope on slide 6 honest.
+Senior review time for labelling is a real, easily-forgotten cost. Partner and manager hours
+spent labelling are hours not billed. Budget them explicitly rather than pretending they are
+free, because if you do not, the eval corpus quietly does not get built.
 
-[FILL BEFORE USE] the capital ask, the milestone it buys, and the non-headcount figures.
-Never present the bracketed placeholders live.
+Inference sits in COGS, not R&D. Most plans in this category get this wrong, and getting it
+right is what makes the cost-per-close comparison honest.
+
+[FILL BEFORE USE] total investment and the loaded-cost comparison. Never present the
+bracketed placeholders live.
 """)
 
 
-# ============================================================== 18. METRICS
+# ============================================================== 17. METRICS & GATES
 
 s = new_slide()
-eyebrow(s, "What to hold us to")
-heading(s, "The metrics that decide whether this works")
+eyebrow(s, "How we know it worked")
+heading(s, "The metrics, and the gate to leave phase 2")
 
 xs = ML
 mets = [
-    ("Auto-post rate", "% of transactions posted with zero human touch, reported by "
-     "category with the denominator stated. Product quality, margin driver and moat, "
-     "in one number."),
+    ("Auto-post rate", "Share of transactions posted with zero human touch, reported by "
+     "category with the denominator stated. Product quality and hours saved in one number."),
     ("Hours per close,\nper entity", "The honest automation measure. Transaction counts "
-     "flatter us; hours do not, because the residual tail holds most of the labour cost."),
-    ("Gross margin\nby cohort", "Must slope up as cohorts age. A flat slope means we are "
-     "a services company with a good story."),
-    ("Restatement /\nerror rate", "The metric that can end the company. Tracked against "
-     "an absolute ceiling, not a trend."),
+     "flatter us; hours do not, because the residual tail holds most of the cost."),
+    ("Cost per close vs.\nloaded labour", "Inference plus review, against the fully-loaded "
+     "cost of the staff time it replaces. If this does not fall, nothing else matters."),
+    ("Restatement /\nerror rate", "The metric that can end this. Governed against an "
+     "absolute ceiling, not a trend — and measured against our own current baseline."),
 ]
 for name, body in mets:
     w = 2.79
-    box(s, xs, 2.0, w, 2.9, fill=PANEL)
-    text(s, name, xs + 0.24, 2.24, w - 0.45, 0.75, size=16, color=ACCENT, bold=True, line=1.15)
-    text(s, body, xs + 0.24, 3.14, w - 0.45, 1.6, size=12.5, color=BODY, line=1.4)
+    box(s, xs, 1.9, w, 2.3, fill=PANEL)
+    text(s, name, xs + 0.24, 2.11, w - 0.45, 0.7, size=15.5, color=ACCENT, bold=True, line=1.15)
+    text(s, body, xs + 0.24, 2.92, w - 0.45, 1.2, size=12, color=BODY, line=1.4)
     xs += w + 0.25
 
-text(s, "Also standing on the board deck: inference cost per entity-month, days-to-close, "
-        "entities per reviewer, and auto-post rate on the hardest category rather than the "
-        "blended average.",
-     ML, 5.1, CW, 0.5, size=13, color=BODY, line=1.35)
+text(s, "Our current error rate is not zero. The bar for an agent posting to a client's "
+        "ledger is our own measured baseline, not perfection — and we should publish both.",
+     ML, 4.34, CW, 0.4, size=13.5, color=WARM, bold=True, line=1.3)
 
-box(s, ML, 5.72, CW, 1.4, fill=INK)
-text(s, "What we are actually building", ML + 0.32, 5.92, 5.4, 0.3, size=10.5,
-     color=RGBColor(0x7A, 0xB8, 0xC8), bold=True, caps=True)
-text(s, "Not AI features on top of accounting software. An accounting department, with "
-        "software as its body — on a substrate designed so that every number it produces "
-        "can be proven, replayed and defended.",
-     ML + 0.32, 6.24, CW - 0.64, 0.7, size=15.5, color=WHITE, bold=True, line=1.3)
+box(s, ML, 4.8, CW, 1.58, fill=PANEL2)
+text(s, "Gate to exit phase 2", ML + 0.32, 4.98, 5.0, 0.28, size=10.5, color=MUTED,
+     bold=True, caps=True)
+gates_l = [("Our ledger primary for [X]% of entities, zero dual-write diff for three closes", "b"),
+           ("Auto-post rate at or above [X]% on the top five categories, denominators stated", "b"),
+           ("Hours per close per entity down [Z]% against the phase 1 baseline", "b")]
+gates_r = [("Restatement rate at or below our own pre-agent baseline", "b"),
+           ("Cost per close below [W]% of loaded labour cost for that engagement", "b"),
+           ("SOC 2 Type II achieved; audit package accepted in one external review", "b")]
+bullets(s, gates_l, ML + 0.32, 5.32, 5.6, 1.0, size=12, gap=5)
+bullets(s, gates_r, ML + 6.2, 5.32, 5.4, 1.0, size=12, gap=5)
+
+box(s, ML, 6.48, CW, 0.6, fill=INK)
+text(s, "Not AI features on top of accounting software. An accounting department with "
+        "software as its body — on a substrate where every number can be proven and defended.",
+     ML + 0.32, 6.6, CW - 0.64, 0.42, size=12.5, color=WHITE, bold=True, line=1.3)
 
 notes(s, """
 Close by handing them the scorecard. Offering the metrics you can be judged on — including
-the one that can kill the company — is a stronger close than a projection, and it sets up
-the board relationship you actually want.
+the one that can end the programme — is a stronger close than a projection, and it sets up
+the governance relationship we actually want.
 
-On auto-post rate: always with the denominator and the category mix. A blended number
-without a denominator is the standard way companies in this category flatter themselves,
-and a technical investor will assume that's what's happening unless you pre-empt it.
+On auto-post rate: always with the denominator and the category mix. A blended number with
+no denominator is the standard way companies in this category flatter themselves, and a
+technical investor will assume that is what is happening unless you pre-empt it.
+
+The line above the gates box is the one to say slowly, because it reframes the whole risk
+conversation and only an accounting firm can say it credibly: our current error rate is not
+zero. Every firm restates, corrects and re-files. The honest bar for the agent is our own
+measured baseline, not perfection, and we intend to publish both numbers. That converts an
+unbounded fear into a comparison — and we are the only party in the room with the data to
+make it.
 
 On restatement rate: note deliberately that this one is governed against an absolute
 ceiling, not a trend. Everything else we optimise; this one we bound. That distinction is
-what a CFO needs to hear before granting write access, and it's what an investor needs to
-hear to believe we understand the liability.
+what a partner group needs to hear before approving write access.
 
-Final line is the positioning statement. Say it, stop, and take questions.
+Final line is the positioning statement. Say it, stop, take questions.
 
-Backup slides worth having ready: unit economics / cost-per-close model, the
-software-spend-vs-labour-spend sourcing, design-partner results, competitive landscape
-(incumbents vs. agent-native), and the liability and attestation structure.
+Backup slides worth having ready: cost-per-close model at current token prices, the activity
+level hours breakdown from time records, competitive landscape, and the liability,
+consent and engagement-letter structure.
 """)
 
 
-prs.save("/Users/cllu/Projects/aimi/agent-native-accounting-deck.pptx")
-print(f"saved · {len(prs.slides.__iter__.__self__._sldIdLst)} slides")
+prs.save("/Users/cllu/Projects/aimi/agent-native-accounting-deck-v2.pptx")
+print(f"saved v2 · {_page['n'] + 1} slides")
